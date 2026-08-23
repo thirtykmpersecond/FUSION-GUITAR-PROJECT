@@ -1,0 +1,64 @@
+@page "/piano"
+@using FusionGuitar.Web.Theory
+
+<section class="space-y-6">
+    <header>
+        <h1 class="text-2xl font-semibold tracking-tight">钢琴键盘 Piano</h1>
+        <p class="text-slate-500 text-sm mt-1">辅助理解音程、和弦与音阶构造，点击琴键发声。</p>
+    </header>
+
+    <section class="card p-5 md:p-6 space-y-4">
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <label class="block">
+                <span class="text-xs text-slate-500 uppercase tracking-wide">根音</span>
+                <select @bind="rootName" class="mt-1 w-full rounded-xl border-slate-300 text-sm" @bind:after="Refresh">
+                    @foreach (var n in Enum.GetValues<NoteName>())
+                    {
+                        <option value="@n">@n</option>
+                    }
+                </select>
+            </label>
+            <label class="block">
+                <span class="text-xs text-slate-500 uppercase tracking-wide">和弦 Chord</span>
+                <select @bind="chordQuality" class="mt-1 w-full rounded-xl border-slate-300 text-sm" @bind:after="Refresh">
+                    @foreach (var q in Enum.GetValues<ChordQuality>())
+                    {
+                        <option value="@q">@q</option>
+                    }
+                </select>
+            </label>
+            <label class="block">
+                <span class="text-xs text-slate-500 uppercase tracking-wide">起始八度 / 范围</span>
+                <div class="flex gap-2 mt-1">
+                    <input type="number" min="1" max="6" @bind="startOctave" class="w-20 rounded-xl border-slate-300 text-sm" @bind:after="Refresh" />
+                    <input type="number" min="1" max="4" @bind="octaves" class="w-20 rounded-xl border-slate-300 text-sm" @bind:after="Refresh" />
+                </div>
+            </label>
+        </div>
+
+        <PianoKeyboard StartOctave="@startOctave" Octaves="@octaves"
+                       HighlightPcs="highlight" RootPc="@((int)rootName)" />
+
+        <div class="text-sm text-slate-500">
+            当前：<b class="text-slate-800 dark:text-slate-100">@chordName</b>
+        </div>
+    </section>
+</section>
+
+@code {
+    private NoteName rootName = NoteName.C;
+    private ChordQuality chordQuality = ChordQuality.Major7;
+    private int startOctave = 3;
+    private int octaves = 2;
+    private IReadOnlySet<int> highlight = new HashSet<int>();
+    private string chordName = "";
+
+    protected override void OnInitialized() => Refresh();
+
+    private void Refresh()
+    {
+        var chord = Chord.Create(rootName, chordQuality);
+        highlight = chord.PitchClasses;
+        chordName = chord.Name;
+    }
+}

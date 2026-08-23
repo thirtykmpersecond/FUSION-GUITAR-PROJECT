@@ -1,0 +1,96 @@
+@inject Interop.AudioInterop Audio
+
+<svg viewBox="@ViewBox" class="@Class" xmlns="http://www.w3.org/2000/svg"
+     role="group" aria-label="Piano keyboard">
+    @foreach (var k in _whites)
+    {
+        var midi = k.Midi;
+        var labelX = k.X + WhiteW / 2;
+        var labelOpacity = ShowLabels && k.IsC ? 1 : 0;
+        <rect x="@k.X" y="0" width="@WhiteW" height="@WhiteH" rx="5" ry="5"
+              fill="@Fill(midi)" stroke="#cbd5e1" stroke-width="1"
+              class="cursor-pointer"
+              @onclick="() => ClickAsync(midi)"
+              @onmouseenter="() => Hover(midi)" />
+        @if (ShowLabels && k.IsC)
+        {
+            @:<text x="@labelX" y="@(WhiteH - 10)" text-anchor="middle" font-size="11" fill="#64748b" class="select-none pointer-events-none">C@(k.Octave)</text>
+        }
+    }
+    @foreach (var k in _blacks)
+    {
+        var midi = k.Midi;
+        var x = k.AnchorX + WhiteW - BlackW / 2.0;
+        <rect x="@x" y="0" width="@BlackW" height="@BlackH" rx="3" ry="3"
+              fill="@Fill(midi)" stroke="#0f172a" stroke-width="1"
+              class="cursor-pointer"
+              @onclick="@(e => ClickAsync(midi))"
+              @onmouseenter="@(e => Hover(midi))" />
+    }
+</svg>
+
+@code {
+    private const double WhiteW = 32;
+    private const double WhiteH = 120;
+    private const double BlackW = 20;
+    private const double BlackH = 76;
+
+    private static readonly int[] WhitePcs = { 0, 2, 4, 5, 7, 9, 11 };
+    private static readonly HashSet<int> BlackPcSet = new() { 1, 3, 6, 8, 10 };
+
+    [Parameter] public int StartOctave { get; set; } = 3;
+    [Parameter] public int Octaves { get; set; } = 2;
+    [Parameter] public IReadOnlySet<int>? HighlightPcs { get; set; }
+    [Parameter] public int? RootPc { get; set; }
+    [Parameter] public EventCallback<int> OnNoteClick { get; set; }
+    [Parameter] public string HighlightColor { get; set; } = "#5a6cf5";
+    [Parameter] public string RootColor { get; set; } = "#ef4444";
+    [Parameter] public bool ShowLabels { get; set; } = true;
+    [Parameter] public bool AudioOnClick { get; set; } = true;
+    [Parameter] public string Class { get; set; } = "w-full h-auto";
+
+    private record WhiteKey(double X, int Midi, int Octave, bool IsC);
+    private record BlackKey(double AnchorX, int Midi);
+
+    private List<WhiteKey> _whites = new();
+    private List<BlackKey> _blacks = new();
+    private string ViewBox => $"0 0 {_whites.Count * WhiteW} {WhiteH}";
+
+    protected override void OnParametersSet()
+    {
+        _whites = new();
+        _blacks = new();
+        int startMidi = (StartOctave + 1) * 12;
+        int totalWhites = Octaves * 7 + 1;
+        double x = 0;
+        for (int i = 0; i < totalWhites; i++)
+        {
+            int oct = i / 7;
+            int pcIdx = i % 7;
+            int midi = startMidi + oct * 12 + WhitePcs[pcIdx];
+            int pc = midi % 12;
+            _whites.Add(new WhiteKey(x, midi, midi / 12 - 1, pc == 0));
+            if (BlackPcSet.Contains((pc + 1) % 12) && i < totalWhites - 1)
+            {
+                _blacks.Add(new BlackKey(x, midi + 1));
+            }
+            x += WhiteW;
+        }
+    }
+
+    private string Fill(int midi)
+    {
+        int pc = midi % 12;
+        if (RootPc.HasValue && pc == RootPc.Value) return RootColor;
+        if (HighlightPcs?.Contains(pc) == true) return HighlightColor;
+        return BlackPcSet.Contains(pc) ? "#0f172a" : "#ffffff";
+    }
+
+    private void Hover(int midi) { /* hook for future */ }
+
+    private async Task ClickAsync(int midi)
+    {
+        if (AudioOnClick) await Audio.PlayMidiAsync(midi, 0.5);
+        await OnNoteClick.InvokeAsync(midi);
+    }
+}

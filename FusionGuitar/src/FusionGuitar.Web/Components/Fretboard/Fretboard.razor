@@ -1,0 +1,123 @@
+@inject Interop.AudioInterop Audio
+
+<svg viewBox="@ViewBox" class="@Class" xmlns="http://www.w3.org/2000/svg" preserveAspectRatio="xMidYMid meet">
+    <!-- Nut / fret 0 -->
+    <rect x="0" y="0" width="@NutWidth" height="@BoardHeight" fill="#1e293b" rx="2" />
+
+    <!-- Frets -->
+    @for (int f = 1; f <= Frets; f++)
+    {
+        var x = NutWidth + (f - 0.5) * FretSpacing;
+        <line x1="@x" y1="0" x2="@x" y2="@BoardHeight" stroke="#94a3b8" stroke-width="@FretWidth(f)" />
+    }
+
+    <!-- Position inlays -->
+    @foreach (var f in InlayFrets)
+    {
+        if (f == 12 || f == 24)
+        {
+            var cx = NutWidth + (f - 1) * FretSpacing + FretSpacing / 2;
+            <circle cx="@cx" cy="@(BoardHeight * 0.30)" r="@MarkerR" fill="#cbd5e1" opacity="0.7" />
+            <circle cx="@cx" cy="@(BoardHeight * 0.70)" r="@MarkerR" fill="#cbd5e1" opacity="0.7" />
+        }
+        else if (f <= Frets)
+        {
+            var cx = NutWidth + (f - 1) * FretSpacing + FretSpacing / 2;
+            <circle cx="@cx" cy="@(BoardHeight / 2)" r="@MarkerR" fill="#cbd5e1" opacity="0.7" />
+        }
+    }
+
+    <!-- Strings -->
+    @for (int s = 0; s < StringCount; s++)
+    {
+        var y = StringY(s);
+        <line x1="0" y1="@y" x2="@TotalWidth" y2="@y"
+              stroke="#475569" stroke-width="@StringGauge(s)" />
+    }
+
+    <!-- Highlighted notes -->
+    @foreach (var n in _notes)
+    {
+        var x = NoteX(n.Fret);
+        var y = StringY(n.StringIndex);
+        var color = n.IsRoot ? RootColor : NoteColor;
+        var label = LabelFor(n);
+        <g class="cursor-pointer" @onclick="() => ClickAsync(n.Note.MidiNumber)"
+           @onmouseenter="() => Hover(n.Note.MidiNumber)">
+            <circle cx="@x" cy="@y" r="@NoteRadius" fill="@color" stroke="#ffffff" stroke-width="1.5" />
+            <text x="@x" y="@(y + 4)" text-anchor="middle" font-size="@(NoteRadius - 2)"
+                  fill="#ffffff" font-weight="600"
+                  class="select-none pointer-events-none"
+                  style="@(ShowLabels ? "" : "display:none;")">@label</text>
+        </g>
+    }
+</svg>
+
+@code {
+    private static readonly int[] InlayFrets = { 3, 5, 7, 9, 12, 15, 17, 19, 21, 24 };
+
+    [Parameter] public IReadOnlyList<FretNote>? Notes { get; set; }
+    [Parameter] public int Frets { get; set; } = 15;
+    [Parameter] public int StartFret { get; set; } = 0;
+    [Parameter] public int StringCount { get; set; } = 6;
+    [Parameter] public bool ShowLabels { get; set; } = true;
+    [Parameter] public bool AudioOnClick { get; set; } = true;
+    [Parameter] public string NoteColor { get; set; } = "#5a6cf5";
+    [Parameter] public string RootColor { get; set; } = "#ef4444";
+    [Parameter] public string Class { get; set; } = "w-full h-auto";
+
+    private const double NutWidth = 10;
+    private const double FretSpacing = 40;
+    private const double BoardHeight = 220;
+    private const double TopPad = 12;
+    private const double NoteRadius = 12;
+    private double MarkerR => 5;
+    private double TotalWidth => NutWidth + Frets * FretSpacing + 10;
+    private string ViewBox => $"0 0 {TotalWidth} {BoardHeight}";
+
+    private IReadOnlyList<FretNote> _notes = Array.Empty<FretNote>();
+
+    protected override void OnParametersSet()
+    {
+        var src = Notes ?? Array.Empty<FretNote>();
+        _notes = src.Where(n => n.Fret >= StartFret && n.Fret <= StartFret + Frets).ToList();
+    }
+
+    private double StringY(int s)
+    {
+        var usable = BoardHeight - TopPad * 2;
+        return TopPad + (usable * s / (StringCount - 1));
+    }
+
+    private double StringGauge(int s)
+    {
+        // low strings thicker
+        return 1.0 + (double)(StringCount - 1 - s) / (StringCount - 1) * 1.8;
+    }
+
+    private int FretWidth(int f) => f == 1 ? 3 : 2;
+
+    private double NoteX(int fret)
+    {
+        var rel = fret - StartFret;
+        if (rel == 0) return NutWidth / 2.0;
+        return NutWidth + (rel - 0.5) * FretSpacing;
+    }
+
+    private string LabelFor(FretNote n)
+    {
+        if (n.IsRoot) return "R";
+        if (!string.IsNullOrEmpty(n.Role)) return n.Role;
+        return NoteLetters[n.Note.PitchClass];
+    }
+
+    private static readonly string[] NoteLetters =
+        { "C", "C#", "D", "D#", "E", "F", "F#", "G", "G#", "A", "A#", "B" };
+
+    private void Hover(int midi) { }
+
+    private async Task ClickAsync(int midi)
+    {
+        if (AudioOnClick) await Audio.PlayMidiAsync(midi, 0.7);
+    }
+}

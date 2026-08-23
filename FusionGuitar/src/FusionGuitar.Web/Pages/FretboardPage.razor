@@ -1,0 +1,58 @@
+@page "/fretboard"
+@using FusionGuitar.Web.Theory
+
+<section class="space-y-6">
+    <header class="flex items-end justify-between flex-wrap gap-4">
+        <div>
+            <h1 class="text-2xl font-semibold tracking-tight">指板图 Fretboard</h1>
+            <p class="text-slate-500 text-sm mt-1">选择根音与音阶，点击音符试听。</p>
+        </div>
+    </header>
+
+    <section class="card p-5 md:p-6 space-y-4">
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <label class="block">
+                <span class="text-xs text-slate-500 uppercase tracking-wide">根音 Root</span>
+                <select @bind="rootName" class="mt-1 w-full rounded-xl border-slate-300 text-sm" @bind:after="Refresh">
+                    @foreach (var n in Enum.GetValues<NoteName>())
+                    {
+                        <option value="@n">@n</option>
+                    }
+                </select>
+            </label>
+            <label class="block">
+                <span class="text-xs text-slate-500 uppercase tracking-wide">音阶 Scale</span>
+                <select @bind="scaleName" class="mt-1 w-full rounded-xl border-slate-300 text-sm" @bind:after="Refresh">
+                    @foreach (var s in ScaleFormulas.All)
+                    {
+                        <option value="@s.Name">@s.Name</option>
+                    }
+                </select>
+            </label>
+            <label class="block">
+                <span class="text-xs text-slate-500 uppercase tracking-wide">把位数 Frets</span>
+                <input type="range" min="12" max="22" step="1" @bind="frets" @bind:after="Refresh" class="mt-3 w-full" />
+                <div class="text-xs text-slate-500 mt-1">@frets 品</div>
+            </label>
+        </div>
+
+        <Fretboard Notes="notes" Frets="@frets" />
+    </section>
+</section>
+
+@code {
+    private NoteName rootName = NoteName.C;
+    private string scaleName = ScaleFormulas.Major.Name;
+    private int frets = 15;
+    private IReadOnlyList<FretNote> notes = Array.Empty<FretNote>();
+
+    protected override void OnInitialized() => Refresh();
+
+    private void Refresh()
+    {
+        var formula = ScaleFormulas.ByName(scaleName) ?? ScaleFormulas.Major;
+        var scale = new Scale(new Note(rootName, 4), formula);
+        var fb = new GuitarFretboard(frets: frets);
+        notes = fb.FindScale(scale, 0, frets);
+    }
+}

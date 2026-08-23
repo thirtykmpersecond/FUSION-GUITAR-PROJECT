@@ -1,0 +1,12 @@
+{
+  "name": "fusionguitar-web",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "tailwind:build": "tailwindcss -i ./Styles/app.css -o ./wwwroot/css/app.css --minify",
+    "tailwind:watch": "tailwindcss -i ./Styles/app.css -o ./wwwroot/css/app.css --watch"
+  },
+  "devDependencies": {
+    "tailwindcss": "^3.4.13"
+  }
+}
