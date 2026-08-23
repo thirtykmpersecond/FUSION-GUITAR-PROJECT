@@ -8,13 +8,12 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <PackageReference Include="Markdig" Version="1.3.2" />
     <PackageReference Include="Microsoft.AspNetCore.Components.WebAssembly" Version="10.0.11" />
     <PackageReference Include="Microsoft.AspNetCore.Components.WebAssembly.DevServer" Version="10.0.11" PrivateAssets="all" />
   </ItemGroup>
 
-  <Target Name="TailwindBuild" BeforeTargets="Build"
-          Inputs="Styles/app.css;tailwind.config.js" Outputs="wwwroot/css/app.css"
-          Condition="Exists('package.json') And '$(DesignTimeBuild)' != 'true'">
+  <Target Name="TailwindBuild" BeforeTargets="Build" Inputs="Styles/app.css;tailwind.config.js" Outputs="wwwroot/css/app.css" Condition="Exists('package.json') And '$(DesignTimeBuild)' != 'true'">
     <Exec Command="npm run tailwind:build" ConsoleToMsBuild="true" />
   </Target>
 

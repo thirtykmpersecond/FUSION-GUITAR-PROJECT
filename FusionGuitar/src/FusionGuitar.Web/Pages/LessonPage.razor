@@ -1,0 +1,107 @@
+@page "/lessons/{ModuleId}/{Slug}"
+@page "/lessons/{ModuleId}"
+@inject Services.LessonService Lessons
+@inject Services.ProgressService Progress
+@inject NavigationManager Nav
+
+<PageTitle>@(_title)</PageTitle>
+
+@if (_lesson is null && _loading)
+{
+    <div class="text-slate-400 text-sm">加载中…</div>
+}
+else if (_lesson is null)
+{
+    <div class="card p-8 text-center">
+        <div class="text-lg font-semibold text-slate-700">课程未找到</div>
+        <a href="/" class="btn mt-4 inline-flex">返回首页</a>
+    </div>
+}
+else
+{
+    <article class="space-y-6">
+        <header class="flex items-start justify-between gap-4 flex-wrap">
+            <div>
+                <div class="text-xs uppercase tracking-wider text-brand-600 font-semibold">@_moduleTitle</div>
+                <h1 class="text-2xl md:text-3xl font-semibold tracking-tight mt-1">@_lesson.Meta.Title</h1>
+                @if (!string.IsNullOrEmpty(_lesson.Meta.Summary))
+                {
+                    <p class="text-slate-500 mt-2 max-w-2xl">@_lesson.Meta.Summary</p>
+                }
+            </div>
+            <button class="btn-ghost border border-slate-200" @onclick="ToggleComplete">
+                @(_completed ? "✓ 已完成" : "标记为完成")
+            </button>
+        </header>
+
+        <section class="card p-6 md:p-10">
+            <LessonRenderer Markdown="_lesson.Markdown" />
+        </section>
+
+        <nav class="flex items-center justify-between gap-4 pt-2">
+            @if (_prev is not null)
+            {
+                <a href="@($"/lessons/{_prev.ModuleId}/{_prev.Slug}")"
+                   class="card p-4 flex-1 hover:shadow-pop transition">
+                    <div class="text-xs text-slate-400">← 上一课</div>
+                    <div class="font-medium text-slate-800 dark:text-slate-100">@_prev.Title</div>
+                </a>
+            }
+            else
+            {
+                <div class="flex-1" />
+            }
+            @if (_next is not null)
+            {
+                <a href="@($"/lessons/{_next.ModuleId}/{_next.Slug}")"
+                   class="card p-4 flex-1 text-right hover:shadow-pop transition">
+                    <div class="text-xs text-slate-400">下一课 →</div>
+                    <div class="font-medium text-slate-800 dark:text-slate-100">@_next.Title</div>
+                </a>
+            }
+        </nav>
+    </article>
+}
+
+@code {
+    [Parameter] public string ModuleId { get; set; } = "";
+    [Parameter] public string? Slug { get; set; }
+
+    private Services.Lesson? _lesson;
+    private LessonNavItem? _prev, _next;
+    private string _moduleTitle = "";
+    private string _title = "课程";
+    private bool _loading = true;
+    private bool _completed;
+
+    protected override async Task OnParametersSetAsync()
+    {
+        _loading = true;
+        var manifest = await Lessons.GetManifestAsync();
+        var mod = manifest.Modules.FirstOrDefault(m => m.Id == ModuleId);
+        if (mod is not null) _moduleTitle = mod.Title;
+
+        // /lessons/{moduleId} with no slug → first lesson in module
+        var targetSlug = Slug ?? mod?.Lessons.OrderBy(l => l.Order).FirstOrDefault()?.Slug;
+        if (targetSlug is not null && mod is not null)
+        {
+            _lesson = await Lessons.GetAsync(ModuleId, targetSlug);
+            (_prev, _next) = await Lessons.GetNeighborsAsync(targetSlug);
+        }
+        else
+        {
+            _lesson = null;
+        }
+        _title = _lesson?.Meta.Title ?? "课程";
+        if (_lesson is not null)
+            _completed = await Progress.IsCompletedAsync(_lesson.Meta.Slug);
+        _loading = false;
+    }
+
+    private async Task ToggleComplete()
+    {
+        if (_lesson is null) return;
+        await Progress.ToggleAsync(_lesson.Meta.Slug);
+        _completed = await Progress.IsCompletedAsync(_lesson.Meta.Slug);
+    }
+}

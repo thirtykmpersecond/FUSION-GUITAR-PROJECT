@@ -1,0 +1,114 @@
+@inject Interop.AudioInterop Audio
+
+<svg viewBox="@ViewBox" class="@Class" xmlns="http://www.w3.org/2000/svg" role="img"
+     aria-label="@($"{Chord.Name} chord diagram")">
+    <g>
+        <text x="@(Width / 2)" y="16" text-anchor="middle"
+              font-size="15" font-weight="600" fill="currentColor"
+              class="text-slate-900 dark:text-white">@Chord.Name</text>
+    </g>
+
+    @if (BaseFret > 0)
+    {
+        <g>
+            <text x="4" y="@(TopPad + FretSpacing/2 + 4)" font-size="11"
+                  fill="currentColor" class="text-slate-500">@BaseFret fr</text>
+        </g>
+    }
+
+    @if (BaseFret == 0)
+    {
+        <rect x="@LeftPad" y="@TopPad" width="@(StringSpacing * (Strings - 1))" height="4"
+              fill="#0f172a" />
+    }
+
+    @for (int f = 1; f <= Frets; f++)
+    {
+        var y = TopPad + f * FretSpacing;
+        <line x1="@LeftPad" y1="@y" x2="@RightX" y2="@y" stroke="#94a3b8" stroke-width="1.5" />
+    }
+
+    @for (int s = 0; s < Strings; s++)
+    {
+        var x = StringX(s);
+        <line x1="@x" y1="@TopPad" x2="@x" y2="@BottomY"
+              stroke="#475569" stroke-width="@StringGauge(s)" />
+    }
+
+    @foreach (var f in _fingerings)
+    {
+        var x = StringX(f.StringIndex);
+        var cy = TopPad - 12;
+        @if (f.Muted)
+        {
+            <g>
+                <text x="@x" y="@(cy + 4)" text-anchor="middle" font-size="14" font-weight="700"
+                      fill="currentColor" class="text-slate-500">×</text>
+            </g>
+        }
+        else if (f.Open)
+        {
+            <circle cx="@x" cy="@cy" r="6" fill="none" stroke="currentColor" stroke-width="1.8"
+                    class="text-slate-500" />
+        }
+    }
+
+    @foreach (var f in _fingerings.Where(x => !x.Muted && !x.Open))
+    {
+        var x = StringX(f.StringIndex);
+        var fret = f.Fret - BaseFret;
+        var y = TopPad + (fret - 0.5) * FretSpacing;
+        var midi = MidiFor(f.StringIndex, f.Fret);
+        <g class="cursor-pointer" @onclick="() => ClickAsync(midi)">
+            <circle cx="@x" cy="@y" r="@DotR" fill="#0f172a" />
+            @if (f.Finger is int finger)
+            {
+                <g>
+                    <text x="@x" y="@(y + 4)" text-anchor="middle" font-size="11"
+                          font-weight="600" fill="#ffffff" class="select-none pointer-events-none">@finger</text>
+                </g>
+            }
+        </g>
+    }
+</svg>
+
+@code {
+    private const int Strings = 6;
+    private const int Frets = 5;
+    private const double LeftPad = 22;
+    private const double RightPad = 10;
+    private const double TopPad = 36;
+    private const double BottomPad = 12;
+    private const double StringSpacing = 22;
+    private const double FretSpacing = 30;
+    private const double DotR = 11;
+
+    private double RightX => LeftPad + StringSpacing * (Strings - 1);
+    private double BottomY => TopPad + Frets * FretSpacing;
+    private double Width => LeftPad + StringSpacing * (Strings - 1) + RightPad;
+    private double Height => BottomY + BottomPad;
+    private string ViewBox => $"0 0 {Width} {Height}";
+
+    [Parameter, EditorRequired] public Chord Chord { get; set; } = default!;
+    [Parameter] public Voicing? Voicing { get; set; }
+    [Parameter] public string Class { get; set; } = "w-auto h-48";
+
+    private IReadOnlyList<Fingering> _fingerings = Array.Empty<Fingering>();
+    private int BaseFret => Voicing?.BaseFret ?? 0;
+
+    protected override void OnParametersSet()
+    {
+        var v = Voicing ?? Voicings.OpenFor(Chord);
+        _fingerings = (IReadOnlyList<Fingering>?)v?.Fingerings ?? Array.Empty<Fingering>();
+    }
+
+    private double StringX(int s) => LeftPad + s * StringSpacing;
+
+    private double StringGauge(int s)
+        => 0.8 + (double)(Strings - 1 - s) / (Strings - 1) * 1.6;
+
+    private async Task ClickAsync(int midi) => await Audio.PlayMidiAsync(midi, 0.7);
+
+    private static readonly int[] OpenMidi = { 40, 45, 50, 55, 59, 64 };
+    private static int MidiFor(int stringIndex, int fret) => OpenMidi[stringIndex] + fret;
+}

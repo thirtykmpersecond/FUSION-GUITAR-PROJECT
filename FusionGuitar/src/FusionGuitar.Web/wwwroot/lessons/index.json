@@ -1,0 +1,18 @@
+{
+  "modules": [
+    {
+      "id": "01-basics",
+      "title": "01 基础夯实",
+      "description": "音名与音程、大小调音阶、三和弦、CAGED、3NPS、五声音阶与蓝调。",
+      "order": 1,
+      "lessons": [
+        { "slug": "01-notes-and-intervals", "title": "音名与音程", "summary": "十二平均律、全音/半音、音程质量与听感色彩。", "order": 1, "tags": ["theory"] },
+        { "slug": "02-major-scale", "title": "大调音阶与自然音程", "summary": "全全半全全全半、调号与自然音级。", "order": 2, "tags": ["scale"] },
+        { "slug": "03-triads-and-7ths", "title": "三和弦与七和弦", "summary": "大调顺阶三和弦/七和弦，和弦命名规则。", "order": 3, "tags": ["chord"] },
+        { "slug": "04-caged", "title": "CAGED 系统", "summary": "五种开放把位形状映射到全指板。", "order": 4, "tags": ["fretboard"] },
+        { "slug": "05-3nps", "title": "3-notes-per-string 指型", "summary": "每条弦三个音，大调音阶经济指法。", "order": 5, "tags": ["fretboard","scale"] },
+        { "slug": "06-pentatonic-blues", "title": "五声音阶与蓝调音阶", "summary": "大小调五声、蓝调音与五声把位连接。", "order": 6, "tags": ["scale","blues"] }
+      ]
+    }
+  ]
+}
