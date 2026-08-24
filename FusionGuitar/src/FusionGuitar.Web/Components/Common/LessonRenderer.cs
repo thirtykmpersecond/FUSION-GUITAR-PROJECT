@@ -9,6 +9,7 @@ using ChordDiagramComponent = FusionGuitar.Web.Components.ChordDiagram.ChordDiag
 using CircleComponent = FusionGuitar.Web.Components.CircleOfFifths.CircleOfFifths;
 using HarmonyComponent = FusionGuitar.Web.Components.HarmonyMap.HarmonyMap;
 using NotationComponent = FusionGuitar.Web.Components.Notation.Notation;
+using ProgressionPlayerComponent = FusionGuitar.Web.Components.AudioPlayer.ProgressionPlayer;
 
 namespace FusionGuitar.Web.Components.Common;
 
@@ -72,6 +73,9 @@ public sealed class LessonRenderer : ComponentBase
                 break;
             case "voicing":
                 RenderVoicing(b, ref seq, seg);
+                break;
+            case "progression":
+                RenderProgression(b, ref seq, seg);
                 break;
             case "callout":
                 b.OpenElement(seq++, "div");
@@ -197,6 +201,45 @@ public sealed class LessonRenderer : ComponentBase
         b.AddAttribute(seq++, "Chord", chord);
         b.AddAttribute(seq++, "Voicing", voicing);
         b.AddAttribute(seq++, "FretCount", 7);
+        b.CloseComponent();
+    }
+
+    // :::progression chords="Dm7,G7,Cmaj7" bars="1,1,1" bpm="100" title="ii–V–I"
+    private static void RenderProgression(RenderTreeBuilder b, ref int seq, LessonSegment seg)
+    {
+        var chordsStr = LessonParser.AsString(seg.Args.GetValueOrDefault("chords"), "Dm7,G7,Cmaj7");
+        var title = LessonParser.AsString(seg.Args.GetValueOrDefault("title"), "和弦进行");
+        var key = LessonParser.AsString(seg.Args.GetValueOrDefault("key"));
+        var bpm = LessonParser.AsInt(seg.Args.GetValueOrDefault("bpm"), 100);
+
+        var steps = Progressions.ParseSteps(chordsStr);
+        var chords = new List<ProgressionChord>();
+        var names = new List<string>();
+        foreach (var step in steps)
+        {
+            var chord = ChordName.Parse(step.ChordSymbol);
+            if (chord is null) continue;
+            var notes = chord.Notes.Select(n => n.ToString()).ToList();
+            names.Add(step.ChordSymbol);
+            for (int x = 0; x < step.Bars; x++)
+                chords.Add(new ProgressionChord(notes, "1n"));
+        }
+
+        if (chords.Count == 0)
+        {
+            b.OpenElement(seq++, "div");
+            b.AddAttribute(seq++, "class", "text-xs text-amber-600");
+            b.AddContent(seq++, $"Cannot parse progression: {chordsStr}");
+            b.CloseElement();
+            return;
+        }
+
+        b.OpenComponent<ProgressionPlayerComponent>(seq++);
+        b.AddAttribute(seq++, "Title", title);
+        b.AddAttribute(seq++, "Key", key);
+        b.AddAttribute(seq++, "Chords", (IReadOnlyList<ProgressionChord>)chords);
+        b.AddAttribute(seq++, "Names", (IReadOnlyList<string>)names);
+        b.AddAttribute(seq++, "Bpm", bpm);
         b.CloseComponent();
     }
 

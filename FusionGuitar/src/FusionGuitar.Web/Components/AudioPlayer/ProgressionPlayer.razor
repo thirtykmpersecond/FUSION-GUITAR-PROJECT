@@ -1,0 +1,87 @@
+@inject Interop.AudioInterop Audio
+
+<div class="card p-4 md:p-5 space-y-3">
+    <div class="flex flex-wrap items-center justify-between gap-2">
+        <div>
+            <div class="font-semibold text-slate-900">@Title</div>
+            @if (!string.IsNullOrEmpty(Key))
+            {
+                <div class="text-xs text-slate-500">@Key</div>
+            }
+        </div>
+        <div class="flex items-center gap-2">
+            <span class="text-xs text-slate-500">BPM</span>
+            <input type="number" min="30" max="240" @bind="_bpm" class="w-16 rounded-lg border-slate-300 text-sm py-1" />
+            <button class="btn" @onclick="ToggleLoop">@(_playing ? "■ 停止" : "▶ 循环播放")</button>
+        </div>
+    </div>
+
+    <div class="flex flex-wrap gap-2">
+        @for (int i = 0; i < Chords.Count; i++)
+        {
+            var idx = i;
+            var name = _chordNames[i];
+            var bars = _bars[i];
+            <button class="chip @(_active == idx ? "chip-active" : "")"
+                    @onclick="() => PlaySingle(idx)">
+                <span class="font-semibold">@name</span>
+                @if (bars > 1)
+                {
+                    <span class="text-[10px] opacity-70">×@bars</span>
+                }
+            </button>
+        }
+    </div>
+</div>
+
+@code {
+    [Parameter] public string Title { get; set; } = "";
+    [Parameter] public string Key { get; set; } = "";
+    [Parameter, EditorRequired] public IReadOnlyList<ProgressionChord> Chords { get; set; } = Array.Empty<ProgressionChord>();
+    [Parameter] public IReadOnlyList<string>? Names { get; set; }
+    [Parameter] public int Bpm { get; set; } = 100;
+
+    private int _bpm = 100;
+    private bool _playing;
+    private int _active = -1;
+    private List<string> _chordNames = new();
+    private List<int> _bars = new();
+
+    protected override void OnInitialized()
+    {
+        _bpm = Bpm;
+        _chordNames = Names is { Count: > 0 }
+            ? Names.ToList()
+            : Chords.Select(c => string.Join(" ", c.Notes).Trim()).ToList();
+        _bars = Chords.Select(_ => 1).ToList();
+    }
+
+    private async Task ToggleLoop()
+    {
+        if (_playing)
+        {
+            await Audio.StopProgressionAsync();
+            _playing = false;
+        }
+        else
+        {
+            await Audio.PlayProgressionAsync(Chords, _bpm);
+            _playing = true;
+        }
+    }
+
+    private async Task PlaySingle(int idx)
+    {
+        _active = idx;
+        await Audio.PlayChordAsync(Chords[idx].Notes, 1.0, 0.7);
+    }
+
+    public async ValueTask StopAllAsync()
+    {
+        if (_playing)
+        {
+            await Audio.StopProgressionAsync();
+            _playing = false;
+        }
+    }
+}

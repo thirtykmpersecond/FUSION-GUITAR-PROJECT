@@ -1,0 +1,40 @@
+@page "/progressions"
+@using FusionGuitar.Web.Theory
+
+<section class="space-y-6">
+    <header>
+        <h1 class="text-2xl font-semibold tracking-tight">和弦进行 Progression</h1>
+        <p class="text-slate-500 text-sm mt-1">常用爵士 / Fusion 和弦进行的循环播放器。点击和弦试听，或循环整段进行。</p>
+    </header>
+
+    @foreach (var prog in Progressions.All)
+    {
+        var player = ToPlayer(prog);
+        <ProgressionPlayer Title="prog.Name" Key="prog.Key"
+                           Chords="player.Chords" Names="player.Names"
+                           Bpm="100" />
+    }
+</section>
+
+@code {
+    private sealed record Player(IReadOnlyList<ProgressionChord> Chords, IReadOnlyList<string> Names);
+
+    private static Player ToPlayer(Progression prog)
+    {
+        var chords = new List<ProgressionChord>();
+        var names = new List<string>();
+        foreach (var step in prog.Steps)
+        {
+            var chord = ChordName.Parse(step.ChordSymbol);
+            if (chord is null) continue;
+            var notes = chord.Notes.Select(n => n.ToString()).ToList();
+            names.Add(step.ChordSymbol);
+            // Repeat per bar: each bar = one whole-note chord (long duration).
+            for (int b = 0; b < step.Bars; b++)
+            {
+                chords.Add(new ProgressionChord(notes, "1n"));
+            }
+        }
+        return new Player(chords, names);
+    }
+}
