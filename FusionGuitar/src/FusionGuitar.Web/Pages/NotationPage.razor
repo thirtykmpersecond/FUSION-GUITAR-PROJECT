@@ -3,24 +3,29 @@
 <section class="space-y-6">
     <header>
         <h1 class="text-2xl font-semibold tracking-tight">乐谱演示 Notation</h1>
-        <p class="text-slate-500 text-sm mt-1">VexFlow 渲染的五线谱。</p>
+        <p class="text-slate-500 text-sm mt-1">VexFlow 渲染的五线谱与吉他 TAB。</p>
     </header>
 
-    <section class="card p-5 md:p-8 space-y-6">
+    <section class="card p-5 md:p-8 space-y-8">
         <div>
-            <div class="text-xs uppercase tracking-wider text-slate-400 mb-2">C 大调音阶（C4 – C5）</div>
+            <div class="text-xs uppercase tracking-wider text-slate-400 mb-2">C 大调音阶（五线谱 + TAB）</div>
             <Notation Clef="treble" KeySignature="C" TimeSignature="4/4"
-                      Notes="@cMajor" />
+                      Notes="@cMajor" TabNotes="@cMajorTab" />
         </div>
 
         <div>
-            <div class="text-xs uppercase tracking-wider text-slate-400 mb-2">A 小调五声音阶</div>
+            <div class="text-xs uppercase tracking-wider text-slate-400 mb-2">A 小调五声音阶（五线谱 + TAB）</div>
             <Notation Clef="treble" KeySignature="Am"
-                      Notes="@aPenta" />
+                      Notes="@aPenta" TabNotes="@aPentaTab" />
         </div>
 
         <div>
-            <div class="text-xs uppercase tracking-wider text-slate-400 mb-2">Cmaj7 琶音</div>
+            <div class="text-xs uppercase tracking-wider text-slate-400 mb-2">C 大横按和弦（TAB only）</div>
+            <Notation Clef="tab" TabNotes="@cBarre" />
+        </div>
+
+        <div>
+            <div class="text-xs uppercase tracking-wider text-slate-400 mb-2">Cmaj7 琶音（五线谱）</div>
             <Notation Clef="treble" KeySignature="C"
                       Notes="@cMaj7" />
         </div>
@@ -28,17 +33,28 @@
 </section>
 
 @code {
-    // VexFlow pitch: "c/4" = middle C, duration q=quarter, h=half, w=whole, 8=eighth
+    // VexFlow pitch: "c/4" = middle C. TAB: TabNote(string 1=high E, fret)
     private IReadOnlyList<NotationNote> cMajor = new[]
     {
-        new NotationNote(new[] { "c/4" }, "q"),
-        new NotationNote(new[] { "d/4" }, "q"),
-        new NotationNote(new[] { "e/4" }, "q"),
-        new NotationNote(new[] { "f/4" }, "q"),
-        new NotationNote(new[] { "g/4" }, "q"),
-        new NotationNote(new[] { "a/4" }, "q"),
-        new NotationNote(new[] { "b/4" }, "q"),
-        new NotationNote(new[] { "c/5" }, "q"),
+        new NotationNote(new[] { "c/4" }, "8"),
+        new NotationNote(new[] { "d/4" }, "8"),
+        new NotationNote(new[] { "e/4" }, "8"),
+        new NotationNote(new[] { "f/4" }, "8"),
+        new NotationNote(new[] { "g/4" }, "8"),
+        new NotationNote(new[] { "a/4" }, "8"),
+        new NotationNote(new[] { "b/4" }, "8"),
+        new NotationNote(new[] { "c/5" }, "8"),
+    };
+    private IReadOnlyList<TabNote> cMajorTab = new[]
+    {
+        new TabNote(new[] { new TabPosition(5, 3) }, "8"),
+        new TabNote(new[] { new TabPosition(4, 0) }, "8"),
+        new TabNote(new[] { new TabPosition(4, 2) }, "8"),
+        new TabNote(new[] { new TabPosition(4, 3) }, "8"),
+        new TabNote(new[] { new TabPosition(3, 0) }, "8"),
+        new TabNote(new[] { new TabPosition(3, 2) }, "8"),
+        new TabNote(new[] { new TabPosition(3, 4) }, "8"),
+        new TabNote(new[] { new TabPosition(2, 0) }, "8"),
     };
 
     private IReadOnlyList<NotationNote> aPenta = new[]
@@ -49,6 +65,29 @@
         new NotationNote(new[] { "e/5" }, "8"),
         new NotationNote(new[] { "g/5" }, "8"),
         new NotationNote(new[] { "a/5" }, "8"),
+    };
+    private IReadOnlyList<TabNote> aPentaTab = new[]
+    {
+        new TabNote(new[] { new TabPosition(5, 0) }, "8"),
+        new TabNote(new[] { new TabPosition(5, 3) }, "8"),
+        new TabNote(new[] { new TabPosition(4, 0) }, "8"),
+        new TabNote(new[] { new TabPosition(4, 2) }, "8"),
+        new TabNote(new[] { new TabPosition(3, 0) }, "8"),
+        new TabNote(new[] { new TabPosition(3, 2) }, "8"),
+    };
+
+    // C major barre at 8th fret (E shape): strings 5-1 from 8th fret
+    private IReadOnlyList<TabNote> cBarre = new[]
+    {
+        new TabNote(new[]
+        {
+            new TabPosition(6, 8),
+            new TabPosition(5, 10),
+            new TabPosition(4, 10),
+            new TabPosition(3, 9),
+            new TabPosition(2, 8),
+            new TabPosition(1, 8),
+        }, "w"),
     };
 
     private IReadOnlyList<NotationNote> cMaj7 = new[]

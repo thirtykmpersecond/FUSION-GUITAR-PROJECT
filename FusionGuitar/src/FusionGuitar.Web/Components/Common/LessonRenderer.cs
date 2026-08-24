@@ -67,6 +67,9 @@ public sealed class LessonRenderer : ComponentBase
             case "staff":
                 RenderStaff(b, ref seq, seg);
                 break;
+            case "tab":
+                RenderTab(b, ref seq, seg);
+                break;
             case "callout":
                 b.OpenElement(seq++, "div");
                 b.AddAttribute(seq++, "class", "callout");
@@ -167,43 +170,111 @@ public sealed class LessonRenderer : ComponentBase
         b.CloseComponent();
     }
 
-    // :::staff clef="treble" key="C" time="4/4" notes="c/4/q d/4/q e/4/q f/4/q g/4/q a/4/q b/4/q c/5/h"
-    // For chords, join keys with '+': "c/4+e/4+g/4/w"
-    // VexFlow pitch format: <note-name>/<octave>, e.g. "c/4" = middle C, "c/5" = high C
-    // Duration: q (quarter), h (half), w (whole), 8 (eighth), 16, hr (half rest), wr (whole rest)
+    // :::staff clef="treble" key="C" time="4/4" notes="c/4/q d/4/q ..."
+    // Chords: "c/4+e/4+g/4/w" (keys joined with '+')
+    // Optional inline TAB aligned to staff notes: tab="6:8 5:10 4:12"
     private static void RenderStaff(RenderTreeBuilder b, ref int seq, LessonSegment seg)
     {
         var clef = LessonParser.AsString(seg.Args.GetValueOrDefault("clef"), "treble");
         var key = LessonParser.AsString(seg.Args.GetValueOrDefault("key"));
         var time = LessonParser.AsString(seg.Args.GetValueOrDefault("time"));
         var notesStr = LessonParser.AsString(seg.Args.GetValueOrDefault("notes"));
+        var tabStr = LessonParser.AsString(seg.Args.GetValueOrDefault("tab"));
 
-        var notes = new List<NotationNote>();
-        if (!string.IsNullOrEmpty(notesStr))
-        {
-            foreach (var token in notesStr.Split(' ', StringSplitOptions.RemoveEmptyEntries))
-            {
-                var slashParts = token.Split('/');
-                if (slashParts.Length >= 3)
-                {
-                    var duration = slashParts[^1].ToLowerInvariant();
-                    // Rejoin middle parts in case octave contains chord split
-                    var pitchPart = string.Join('/', slashParts.Take(slashParts.Length - 1));
-                    var keys = pitchPart.Split('+')
-                        .Select(k => k.Trim().ToLowerInvariant())
-                        .Where(k => !string.IsNullOrEmpty(k))
-                        .ToArray();
-                    if (keys.Length > 0)
-                        notes.Add(new NotationNote(keys, duration));
-                }
-            }
-        }
+        var notes = ParseStaffNotes(notesStr);
+        var tab = ParseInlineTab(tabStr, notes);
 
         b.OpenComponent<NotationComponent>(seq++);
         b.AddAttribute(seq++, "Clef", clef);
         if (!string.IsNullOrEmpty(key)) b.AddAttribute(seq++, "KeySignature", key);
         if (!string.IsNullOrEmpty(time)) b.AddAttribute(seq++, "TimeSignature", time);
         b.AddAttribute(seq++, "Notes", notes);
+        if (tab.Count > 0) b.AddAttribute(seq++, "TabNotes", tab);
         b.CloseComponent();
+    }
+
+    // Standalone TAB:
+    // :::tab notes="6:0+5:2+4:2/q 3:1+2:0+1:0/h"
+    // Each token is <string:fret>[+<string:fret>...]/<duration>
+    private static void RenderTab(RenderTreeBuilder b, ref int seq, LessonSegment seg)
+    {
+        var notesStr = LessonParser.AsString(seg.Args.GetValueOrDefault("notes"));
+        var tab = ParseTabNotes(notesStr);
+        b.OpenComponent<NotationComponent>(seq++);
+        b.AddAttribute(seq++, "Clef", "tab");
+        b.AddAttribute(seq++, "TabNotes", tab);
+        b.CloseComponent();
+    }
+
+    private static List<NotationNote> ParseStaffNotes(string notesStr)
+    {
+        var notes = new List<NotationNote>();
+        if (string.IsNullOrEmpty(notesStr)) return notes;
+        foreach (var token in notesStr.Split(' ', StringSplitOptions.RemoveEmptyEntries))
+        {
+            var slashParts = token.Split('/');
+            if (slashParts.Length >= 3)
+            {
+                var duration = slashParts[^1].ToLowerInvariant();
+                var pitchPart = string.Join('/', slashParts.Take(slashParts.Length - 1));
+                var keys = pitchPart.Split('+')
+                    .Select(k => k.Trim().ToLowerInvariant())
+                    .Where(k => !string.IsNullOrEmpty(k))
+                    .ToArray();
+                if (keys.Length > 0)
+                    notes.Add(new NotationNote(keys, duration));
+            }
+        }
+        return notes;
+    }
+
+    private static List<TabNote> ParseInlineTab(string tabStr, List<NotationNote> staffNotes)
+    {
+        var result = new List<TabNote>();
+        if (string.IsNullOrEmpty(tabStr)) return result;
+
+        var tokens = tabStr.Split(' ', StringSplitOptions.RemoveEmptyEntries);
+        for (var i = 0; i < tokens.Length; i++)
+        {
+            if (!TryParseStringFret(tokens[i], out var str, out var fret)) continue;
+            var dur = i < staffNotes.Count ? staffNotes[i].Duration : "q";
+            result.Add(new TabNote(new[] { new TabPosition(str, fret) }, dur));
+        }
+        return result;
+    }
+
+    private static List<TabNote> ParseTabNotes(string notesStr)
+    {
+        var result = new List<TabNote>();
+        if (string.IsNullOrEmpty(notesStr)) return result;
+
+        foreach (var token in notesStr.Split(' ', StringSplitOptions.RemoveEmptyEntries))
+        {
+            var slashParts = token.Split('/');
+            if (slashParts.Length < 2) continue;
+            var duration = slashParts.Length >= 3
+                ? string.Join('/', slashParts.Skip(1)).ToLowerInvariant()
+                : "q";
+            var positionsPart = slashParts[0];
+            var positions = new List<TabPosition>();
+            foreach (var sf in positionsPart.Split('+'))
+            {
+                if (TryParseStringFret(sf, out var s, out var f))
+                    positions.Add(new TabPosition(s, f));
+            }
+            if (positions.Count > 0)
+                result.Add(new TabNote(positions, duration));
+        }
+        return result;
+    }
+
+    private static bool TryParseStringFret(string token, out int str, out int fret)
+    {
+        str = 0; fret = 0;
+        var parts = token.Split(':');
+        return parts.Length == 2
+            && int.TryParse(parts[0], out str)
+            && int.TryParse(parts[1], out fret)
+            && str is >= 1 and <= 6;
     }
 }

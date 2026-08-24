@@ -14,12 +14,17 @@ public sealed class NotationInterop(IJSRuntime js) : IAsyncDisposable
         string? timeSig,
         string? keySig,
         IReadOnlyList<NotationNote> notes,
-        bool autoBeam = true)
+        IReadOnlyList<TabNote>? tabNotes = null)
     {
         var m = await _module.Value;
         var dto = notes.Select(n => new
         {
             keys = n.Keys.ToArray(),
+            duration = n.Duration
+        }).ToArray();
+        var tabDto = tabNotes?.Select(n => new
+        {
+            positions = n.Positions.Select(p => new { str = p.String, fret = p.Fret }).ToArray(),
             duration = n.Duration
         }).ToArray();
         await m.InvokeVoidAsync("renderStave", elementId, new
@@ -29,7 +34,7 @@ public sealed class NotationInterop(IJSRuntime js) : IAsyncDisposable
             timeSig,
             keySig,
             notes = dto,
-            autoBeam
+            tabNotes = tabDto
         });
     }
 
@@ -44,3 +49,5 @@ public sealed class NotationInterop(IJSRuntime js) : IAsyncDisposable
 }
 
 public sealed record NotationNote(IReadOnlyList<string> Keys, string Duration);
+public sealed record TabPosition(int String, int Fret);
+public sealed record TabNote(IReadOnlyList<TabPosition> Positions, string Duration);

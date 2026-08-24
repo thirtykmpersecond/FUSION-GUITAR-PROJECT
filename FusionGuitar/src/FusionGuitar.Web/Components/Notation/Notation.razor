@@ -1,18 +1,20 @@
 @inject Interop.NotationInterop NotationJs
 
-<div id="@_id" class="@Class" style="min-height:160px; overflow-x:auto;"></div>
+<div id="@_id" class="@Class" style="min-height:@(_height)px; overflow-x:auto;"></div>
 
 @code {
     private static int _counter;
     private readonly string _id = $"vex-{System.Threading.Interlocked.Increment(ref _counter)}";
+    private int _height = 170;
     private bool _firstRender = true;
     private int _lastHash;
 
     [Parameter] public IReadOnlyList<NotationNote> Notes { get; set; } = Array.Empty<NotationNote>();
+    [Parameter] public IReadOnlyList<TabNote> TabNotes { get; set; } = Array.Empty<TabNote>();
     [Parameter] public string Clef { get; set; } = "treble";
     [Parameter] public string? TimeSignature { get; set; }
     [Parameter] public string? KeySignature { get; set; }
-    [Parameter] public int Width { get; set; } = 520;
+    [Parameter] public int Width { get; set; } = 540;
     [Parameter] public string Class { get; set; } = "";
 
     protected override async Task OnAfterRenderAsync(bool firstRender)
@@ -22,10 +24,11 @@
         {
             _firstRender = false;
             _lastHash = hash;
+            _height = (TabNotes?.Count > 0) ? 300 : 170;
             await Task.Yield();
             try
             {
-                await NotationJs.RenderStaveAsync(_id, Width, Clef, TimeSignature, KeySignature, Notes);
+                await NotationJs.RenderStaveAsync(_id, Width, Clef, TimeSignature, KeySignature, Notes, TabNotes);
             }
             catch (Exception ex)
             {
@@ -42,6 +45,11 @@
         {
             h.Add(n.Duration);
             foreach (var k in n.Keys) h.Add(k);
+        }
+        foreach (var t in TabNotes)
+        {
+            h.Add(t.Duration);
+            foreach (var p in t.Positions) { h.Add(p.String); h.Add(p.Fret); }
         }
         return h.ToHashCode();
     }
