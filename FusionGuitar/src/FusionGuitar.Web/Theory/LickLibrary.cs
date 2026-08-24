@@ -81,11 +81,36 @@ public static class LickLibrary
         Description: "目标音 G 前的半音级进包围，最常用的色彩手法。",
         Notes: LickBuilder.FromFrets("4:0:0.5 4:1:0.5 4:2:0.5 4:3:0.5 3:2:1 3:3:0.5 3:5:1"));
 
+    public static readonly Lick Holdsworth1 = new(
+        "Holdsworth 四度句子", "Master", "C",
+        Backing: "Cmaj7",
+        Description: "Allan Holdsworth 标志性的四度叠置线性运动。",
+        Notes: LickBuilder.FromFrets("4:5:0.5 4:4:0.5 3:4:0.5 3:2:0.5 3:1:0.5 2:0:0.5 2:1:1"));
+
+    public static readonly Lick Metheny1 = new(
+        "Metheny 抒情长句", "Master", "G",
+        Backing: "Gmaj7",
+        Description: "Pat Metheny 的抒情长句：级进 + 八度跳 + 长音。",
+        Notes: LickBuilder.FromMidi("67:1 69:0.5 71:0.5 72:1 76:2 72:0.5 71:0.5 67:1"));
+
+    public static readonly Lick Scofield1 = new(
+        "Scofield 蓝调歪句", "Master", "G",
+        Backing: "G7",
+        Description: "John Scofield 的蓝调 + 歪斜切分句子。",
+        Notes: LickBuilder.FromFrets("6:3:0.5 5:0:0.5 5:2:0.5 4:2:0.25 4:0:0.25 3:2:0.5 3:0:0.5 2:0:1"));
+
+    public static readonly Lick McLaughlin1 = new(
+        "McLaughlin 五声堆叠", "Master", "D",
+        Backing: "D7",
+        Description: "John McLaughlin 的印度色彩五声堆叠与高速连奏。",
+        Notes: LickBuilder.FromFrets("4:2:0.25 4:4:0.25 3:2:0.25 3:4:0.25 3:2:0.25 2:0:0.25 2:3:0.25 2:5:1"));
+
     public static readonly IReadOnlyList<Lick> All = new[]
     {
         Dorian1, Dorian2, Mixolydian1, Mixolydian2, Blues1,
         Bebop1, Bebop2, Pentatonic1, Minor1, Lydian1,
-        Fusion1, Altered1, Chromatic1
+        Fusion1, Altered1, Chromatic1,
+        Holdsworth1, Metheny1, Scofield1, McLaughlin1
     };
 
     public static Lick? ByName(string name)
