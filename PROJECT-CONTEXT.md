@@ -2,7 +2,7 @@
 
 > 本文档记录项目当前状态、技术栈、约定与踩坑，便于在新机器/新会话中快速恢复上下文。
 >
-> 最后更新：阶段 4 完成（Drop2/Drop3 Voicing 引擎、和弦进行播放器、模块 4-5 课程）。
+> 最后更新：阶段 5 完成（Lick 库三联动、模块 6-7 课程）。
 
 ## 1. 项目基本信息
 
@@ -21,7 +21,7 @@
 | 音频 | Tone.js | Tone@15.0.4（CDN），`wwwroot/js/audio.js` + `interop.js` + `AudioInterop.cs` |
 | Markdown | Markdig | Markdig 1.3.2 |
 | 乐谱 | VexFlow | **VexFlow 4.2.3（CDN UMD，全局 `Vex`）**，`wwwroot/js/notation.js` + `NotationInterop.cs` |
-| 测试 | xUnit | xUnit，**73 个测试全通过** |
+| 测试 | xUnit | xUnit，**82 个测试全通过** |
 | PWA / MAUI | — | 未开始 |
 
 ## 3. 已完成阶段
@@ -91,6 +91,23 @@
 - 模块 5 `05-rhythm/` 6 节：节奏感觉、伴奏节奏型、Bossa、Funk、奇数拍、Rhythm Changes
 - 每节课嵌入 `:::voicing` / `:::staff`(五线谱+TAB) / `:::progression` 作为 Lick 示范
 
+### 阶段 5（Lick 三联动、模块 6-7）
+
+- **Lick 模型** `Theory/Lick.cs`：`Lick`（名称/风格/调/背景和弦/描述）+ `LickNote`（Midi、Beats、StringIndex/Fret 可选）；`LickBuilder.FromMidi("60:1 62:0.5")` 和 `FromFrets("4:0:0.5")`（VexFlow 弦号 1=高E，内部转吉他索引 0=低E）
+- **Notation 交互增强** `wwwroot/js/notation.js`：
+  - `wireClick` + `registerBoxes`：用 VexFlow `getBoundingBox()` 在 SVG 上叠透明 hit-area，音符可点击
+  - `highlightNote` / `clearHighlight`：按存储的 bounding box 画高亮环
+  - C# 侧 `NotationEvents`（`[JSInvokable] OnNoteClick`）+ `NotationInterop.HighlightNoteAsync/ClearHighlightAsync`
+  - Notation 组件新增 `OnNoteClick` / `HighlightedIndex` 参数；`DotNetObjectReference` 需显式 Create + Dispose
+- **Fretboard 高亮**：新增 `Highlight=(int,int)?` 参数，画脉冲高亮环
+- **AudioInterop 逐音播放**：`scheduleSequence(notes,bpm,onNote)` + `stopSequence`；`SequenceEvents`（`[JSInvokable] OnNote`）；`LickNoteDto`
+- **LickPlayer** `Components/Lick/LickPlayer.razor`：三联动——Notation（五线谱+TAB）+ Fretboard + 播放控件（播放/停止/0.5x/0.75x/1x/单音跳转），播放时 `SequenceEvents.OnNote` 回调同步高亮指板与乐谱
+- **LickLibrary** `Theory/LickLibrary.cs`：17 个 Lick（Dorian×2、Mixolydian×2、Blues、Bebop×2、Pentatonic、NaturalMinor、Lydian、Fusion、Altered、Chromatic + 大师：Holdsworth/Metheny/Scofield/McLaughlin），`ByStyle`/`ByName`
+- **/licks 页** `Pages/LicksPage.razor`：风格筛选 chip + 堆叠 LickPlayer；**:::lick name="..." bpm="..."** 指令
+- 模块 6 `06-improvisation/` 8 节：目标音、节奏控制、动机句法、空间感、和弦音即兴、转调、色彩音、练习方法论
+- 模块 7 `07-masters/` 7 节：Holdsworth、Metheny、Martino、Scofield、McLaughlin、Fusion 综合、大师研习法
+- 所有课程 Lick 引用经脚本校验均能在 `LickLibrary` 中解析
+
 ## 4. 关键约定 & 踩过的坑
 
 1. **类名与命名空间冲突**：乐理类已改名为 `GuitarFretboard`；Renderer 里用 `using XXComponent = ...` 别名。
@@ -115,6 +132,14 @@
 17. **DropVoicings 只支持 4 音七和弦**：三和弦会抛 `ArgumentException`。生成时过滤：品数 ≤ 15、手指跨度 ≤ 5 品、必须含全部和弦音（`chord.PitchClasses.IsSubsetOf`）。
 18. **Chord.Create 默认 octave=4**：`Chord.Notes` 落在 C4-B5 区间。课程 `:::progression` / `:::staff` 引用和弦音符时注意音域。
 19. **`ChordName.Parse` 边界**：`"F#"` 提升号正确；`"Bbm7"` 的 b 会转成 A#（等音）。三全音替代课里 `Db7` 解析为 D#（等音）不改变音高。
+20. **弦号方向有三套约定**（易混）：
+    - VexFlow `TabPosition`：`1` = 高音 E（①弦）
+    - `GuitarFretboard` / `Fingering`：`StringIndex` 0 = 低 E
+    - `LickNote`：内部用吉他约定（0=低E），`LickBuilder.FromFrets` 接收 VexFlow 弦号再转换；LickPlayer 里转回 VexFlow 用 `6 - StringIndex`
+21. **`DotNetObjectReference` 生命周期**：每次 Create 必须配对 Dispose（`NotationEvents` / `SequenceEvents`），否则泄漏。组件 `@implements IAsyncDisposable`。
+22. **VexFlow 音符点击**：VexFlow 4 的 note SVG 元素难以直接定位，采用 `getBoundingBox()` 叠透明 `<rect>` hit-area + 单独存 box 画高亮环。每次 `renderStave` 开头要 `__noteBoxes.delete(elementId)` + 清空 registry，否则重绘后 box 过期。
+23. **Blazor Razor 内联中文字符串**：`@onclick="() => SetStyle("全部")"` 会让 Razor 解析器把引号搞乱（报 `SetStyle(string)` 参数缺失）。改用代码字段 `_allLabel` 或在 code-behind 定义，避免属性里内联含中文引号的字符串。
+24. **Lick 时长映射**：`DurationFor(beats)` 把时值四舍五入到最近的标准音符（h/q/8/16），用于 VexFlow 显示；音频播放用真实 `beats`，两者只在显示上近似。
 
 ## 5. 目录结构（当前实际）
 
@@ -140,28 +165,31 @@ FUSION-GUITAR-PROJECT-PLAN/
     │   │   ├── CircleOfFifths/
     │   │   ├── HarmonyMap/
     │   │   ├── AudioPlayer/{AudioPlayer,ProgressionPlayer}.razor
+    │   │   ├── Lick/LickPlayer.razor
     │   │   └── Common/{LessonParser.cs,LessonRenderer.cs}
     │   ├── Theory/                        # Note, Interval, Scale, Chord, GuitarFretboard,
     │   │                                  # Voicing, ChordName, DropVoicings, VoiceLeading,
-    │   │                                  # Progression, Enums
-    │   ├── Interop/                       # AudioInterop, NotationInterop
+    │   │                                  # Progression, Lick, LickLibrary, Enums
+    │   ├── Interop/                       # AudioInterop, NotationInterop (+ events)
     │   ├── Services/                      # LessonService, LessonModels, ProgressService
     │   ├── Pages/                         # Home, FretboardPage, PianoPage, NotationPage,
     │   │                                  # CirclePage, HarmonyPage, VoicingsPage,
-    │   │                                  # ProgressionsPage, LessonPage, NotFound
+    │   │                                  # ProgressionsPage, LicksPage, LessonPage, NotFound
     │   └── wwwroot/
     │       ├── index.html                 # Tone@15 + VexFlow@4 CDN
     │       ├── js/{audio.js,notation.js,interop.js}
     │       └── lessons/
-    │           ├── index.json             # 模块 1-5 课程目录
+    │           ├── index.json             # 模块 1-7 课程目录
     │           ├── 01-basics/*.md         # 6 节
     │           ├── 02-modes/*.md          # 8 节
     │           ├── 03-chord-scale/*.md    # 7 节
     │           ├── 04-advanced-harmony/*.md  # 8 节
-    │           └── 05-rhythm/*.md         # 6 节
+    │           ├── 05-rhythm/*.md         # 6 节
+    │           ├── 06-improvisation/*.md  # 8 节
+    │           └── 07-masters/*.md        # 7 节
     └── tests/FusionGuitar.Tests/
         ├── FusionGuitar.Tests.csproj
-        ├── Theory/{Note,Scale,Chord,Fretboard,DropVoicing,ChordName,Progression}Tests.cs
+        ├── Theory/{Note,Scale,Chord,Fretboard,DropVoicing,ChordName,Progression,Lick,LickLibrary}Tests.cs
         └── LessonParserTests.cs           # 含引号空格回归
 ```
 
@@ -179,7 +207,7 @@ npm install
 
 cd ../../..
 dotnet build FusionGuitar/FusionGuitar.slnx
-dotnet test  FusionGuitar/FusionGuitar.slnx     # 应 73 passed
+dotnet test  FusionGuitar/FusionGuitar.slnx     # 应 82 passed
 dotnet run   --project FusionGuitar/src/FusionGuitar.Web
 # 访问 http://localhost:5294
 ```
@@ -193,6 +221,11 @@ dotnet publish FusionGuitar/src/FusionGuitar.Web -c Release -o ./publish
 ## 7. 提交历史（按时间倒序，关键提交）
 
 ```
+d3d1be7  feat(lessons): module 7 masters + master-style licks
+4811529  feat(lessons): module 6 improvisation + register modules 6-7
+6de6617  feat(licks): lick library, /licks browser page, :::lick directive
+9a967eb  feat(lick): Lick model, LickPlayer with staff/fretboard/audio sync
+32f2e72  docs: refresh README and PROJECT-CONTEXT for stage 4
 cbe9699  feat(lessons): module 4 advanced harmony + module 5 rhythm
 546d7b8  feat(progressions): progression library, player component, /progressions page
 065923f  feat(voicings): chord diagram barre support + /voicings browser page
@@ -210,14 +243,16 @@ f287fdf  docs(lessons): revise 3NPS lesson with accurate tab and pattern table
 86fe6d4  chore: bootstrap Fusion Guitar stage 1
 ```
 
-## 8. 下一步：阶段 5（尚未开始）
+## 8. 下一步：阶段 6（尚未开始）
 
 按计划文档：
 
-1. Lick 库系统（乐谱 + 音频 + 指板联动）
-2. 模块 6 即兴演奏课程
-3. 模块 7 风格与大师分析课程
-4. 乐谱与指板 / 钢琴联动（点击乐谱高亮指板位置）
+1. 深色 / 浅色模式切换
+2. 移动端深度适配（手机 / 平板练琴场景）
+3. PWA 离线支持
+4. 性能优化
+5. 部署（GitHub Pages / 自有服务器）与多设备进度同步
+6. 乐谱与钢琴键盘联动（点击乐谱高亮钢琴位置，阶段 5 只做了指板联动）
 5. `<ChordDiagram>` 支持 Drop2+4 / Drop 扩展（目前 Drop3 已支持）
 
 ## 9. 风格 / 代码约定
@@ -233,9 +268,9 @@ f287fdf  docs(lessons): revise 3NPS lesson with accurate tab and pattern table
 ## 10. 已知遗留小问题
 
 - `audio.js` 和 `interop.js` 有重复代码，未来只保留 `interop.js`
-- `<ChordDiagram>` 只支持开放把位；横按 / Drop voicings 待阶段 4
+- `<ChordDiagram>` 目前依赖 DropVoicings 生成的 Fingering；开放把位与 Drop voicings 均可用
 - 深色模式 class 已留但还没有切换按钮（阶段 6）
-- 移动端布局仅基础响应式（`md:` 断点），未深度适配
-- 模块 4-7 课程待写
-- `ProgressService` 用 `localStorage`，未做多设备同步
-- VexFlow 走 CDN，离线场景待 PWA 阶段本地化
+- 移动端布局仅基础响应式（`md:` 断点），未深度适配（阶段 6）
+- `ProgressService` 用 `localStorage`，未做多设备同步（阶段 6）
+- VexFlow / Tone.js 走 CDN，离线场景待 PWA 阶段本地化（阶段 6）
+- LickPlayer 的 VexFlow 音符高亮基于 bounding box 叠环；TAB-only / 换行重绘场景未全覆盖测试（浏览器端）
