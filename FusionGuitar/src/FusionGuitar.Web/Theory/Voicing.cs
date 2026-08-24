@@ -1,7 +1,6 @@
 namespace FusionGuitar.Web.Theory;
 
 public sealed record Fingering(int StringIndex, int Fret, int? Finger = null, bool Muted = false, bool Open = false);
-
 public sealed record Voicing(
     string Name,
     NoteName Root,

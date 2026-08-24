@@ -22,7 +22,7 @@
               fill="#0f172a" />
     }
 
-    @for (int f = 1; f <= Frets; f++)
+    @for (int f = 1; f <= _fretCount; f++)
     {
         var y = TopPad + f * FretSpacing;
         <line x1="@LeftPad" y1="@y" x2="@RightX" y2="@y" stroke="#94a3b8" stroke-width="1.5" />
@@ -53,7 +53,23 @@
         }
     }
 
-    @foreach (var f in _fingerings.Where(x => !x.Muted && !x.Open))
+    @foreach (var barre in _barres)
+    {
+        var fret = barre.Fret - BaseFret;
+        var y = TopPad + (fret - 0.5) * FretSpacing;
+        var x1 = StringX(barre.StartString);
+        var x2 = StringX(barre.EndString);
+        <g class="cursor-pointer" @onclick="() => ClickBarreAsync(barre)">
+            <rect x="@x1" y="@(y - DotR * 0.55)" width="@(x2 - x1)"
+                  height="@(DotR * 1.1)" rx="5" fill="#0f172a" />
+            <g>
+                <text x="@((x1 + x2) / 2)" y="@(y + 4)" text-anchor="middle" font-size="11"
+                      font-weight="600" fill="#ffffff" class="select-none pointer-events-none">@barre.Finger</text>
+            </g>
+        </g>
+    }
+
+    @foreach (var f in _dots)
     {
         var x = StringX(f.StringIndex);
         var fret = f.Fret - BaseFret;
@@ -74,7 +90,6 @@
 
 @code {
     private const int Strings = 6;
-    private const int Frets = 5;
     private const double LeftPad = 22;
     private const double RightPad = 10;
     private const double TopPad = 36;
@@ -84,7 +99,7 @@
     private const double DotR = 11;
 
     private double RightX => LeftPad + StringSpacing * (Strings - 1);
-    private double BottomY => TopPad + Frets * FretSpacing;
+    private double BottomY => TopPad + _fretCount * FretSpacing;
     private double Width => LeftPad + StringSpacing * (Strings - 1) + RightPad;
     private double Height => BottomY + BottomPad;
     private string ViewBox => $"0 0 {Width} {Height}";
@@ -92,14 +107,54 @@
     [Parameter, EditorRequired] public Chord Chord { get; set; } = default!;
     [Parameter] public Voicing? Voicing { get; set; }
     [Parameter] public string Class { get; set; } = "w-auto h-48";
+    [Parameter] public int FretCount { get; set; } = 5;
+
+    private sealed record Barre(int StartString, int EndString, int Fret, int Finger);
 
     private IReadOnlyList<Fingering> _fingerings = Array.Empty<Fingering>();
+    private IReadOnlyList<Barre> _barres = Array.Empty<Barre>();
+    private IReadOnlyList<Fingering> _dots = Array.Empty<Fingering>();
+    private int _fretCount = 5;
     private int BaseFret => Voicing?.BaseFret ?? 0;
 
     protected override void OnParametersSet()
     {
+        _fretCount = Math.Max(3, FretCount);
         var v = Voicing ?? Voicings.OpenFor(Chord);
         _fingerings = (IReadOnlyList<Fingering>?)v?.Fingerings ?? Array.Empty<Fingering>();
+        (_barres, _dots) = SplitBarres(_fingerings);
+    }
+
+    private static (IReadOnlyList<Barre>, IReadOnlyList<Fingering>) SplitBarres(IReadOnlyList<Fingering> fings)
+    {
+        var dots = new List<Fingering>();
+        var barres = new List<Barre>();
+        var notes = fings.Where(x => !x.Muted && !x.Open && x.Finger is not null)
+                         .OrderBy(x => x.StringIndex).ToList();
+        int i = 0;
+        while (i < notes.Count)
+        {
+            int j = i;
+            while (j + 1 < notes.Count &&
+                   notes[j + 1].Finger == notes[i].Finger &&
+                   notes[j + 1].Fret == notes[i].Fret &&
+                   notes[j + 1].StringIndex == notes[j].StringIndex + 1)
+                j++;
+            if (j > i)
+            {
+                barres.Add(new Barre(notes[i].StringIndex, notes[j].StringIndex,
+                                     notes[i].Fret, notes[i].Finger!.Value));
+            }
+            else
+            {
+                dots.Add(notes[i]);
+            }
+            i = j + 1;
+        }
+        // Non-fingered notes are always dots.
+        foreach (var f in fings.Where(x => !x.Muted && !x.Open && x.Finger is null))
+            dots.Add(f);
+        return (barres, dots);
     }
 
     private double StringX(int s) => LeftPad + s * StringSpacing;
@@ -108,6 +163,12 @@
         => 0.8 + (double)(Strings - 1 - s) / (Strings - 1) * 1.6;
 
     private async Task ClickAsync(int midi) => await Audio.PlayMidiAsync(midi, 0.7);
+
+    private async Task ClickBarreAsync(Barre barre)
+    {
+        for (int s = barre.StartString; s <= barre.EndString; s++)
+            await Audio.PlayMidiAsync(MidiFor(s, barre.Fret), 0.12);
+    }
 
     private static readonly int[] OpenMidi = { 40, 45, 50, 55, 59, 64 };
     private static int MidiFor(int stringIndex, int fret) => OpenMidi[stringIndex] + fret;

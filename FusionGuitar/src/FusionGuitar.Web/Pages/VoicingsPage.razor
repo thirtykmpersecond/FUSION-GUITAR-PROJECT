@@ -1,0 +1,115 @@
+@page "/voicings"
+@using FusionGuitar.Web.Theory
+
+<section class="space-y-6">
+    <header class="flex items-end justify-between flex-wrap gap-4">
+        <div>
+            <h1 class="text-2xl font-semibold tracking-tight">Drop 和弦 Voicings</h1>
+            <p class="text-slate-500 text-sm mt-1">Drop2 / Drop3 和弦指型浏览器。选择一个 4 音和弦，查看各弦组、各转位的指型。</p>
+        </div>
+    </header>
+
+    <section class="card p-5 md:p-6 space-y-4">
+        <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
+            <label class="block">
+                <span class="text-xs text-slate-500 uppercase tracking-wide">根音 Root</span>
+                <select @bind="rootName" class="mt-1 w-full rounded-xl border-slate-300 text-sm" @bind:after="Refresh">
+                    @foreach (var n in Enum.GetValues<NoteName>())
+                    {
+                        <option value="@n">@n</option>
+                    }
+                </select>
+            </label>
+            <label class="block">
+                <span class="text-xs text-slate-500 uppercase tracking-wide">和弦质量 Quality</span>
+                <select @bind="qualityName" class="mt-1 w-full rounded-xl border-slate-300 text-sm" @bind:after="Refresh">
+                    @foreach (var q in SevenQualities)
+                    {
+                        <option value="@q">@q</option>
+                    }
+                </select>
+            </label>
+            <label class="block">
+                <span class="text-xs text-slate-500 uppercase tracking-wide">类型 Type</span>
+                <select @bind="typeName" class="mt-1 w-full rounded-xl border-slate-300 text-sm" @bind:after="Refresh">
+                    <option value="Drop2">Drop2</option>
+                    <option value="Drop3">Drop3</option>
+                </select>
+            </label>
+            <label class="block">
+                <span class="text-xs text-slate-500 uppercase tracking-wide">弦组 Strings</span>
+                <select @bind="strings" class="mt-1 w-full rounded-xl border-slate-300 text-sm" @bind:after="Refresh">
+                    <option value="1234">①②③④（高音）</option>
+                    <option value="2345">②③④⑤</option>
+                    <option value="3456">③④⑤⑥（低音）</option>
+                </select>
+            </label>
+        </div>
+
+        <div class="flex items-center gap-2 text-sm text-slate-500">
+            <span>当前和弦：</span>
+            <span class="font-semibold text-slate-900">@CurrentChord.Name</span>
+            <span>共 @voicings.Count 个指型</span>
+        </div>
+    </section>
+
+    @if (voicings.Count > 0)
+    {
+        <section class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+            @for (int i = 0; i < voicings.Count; i++)
+            {
+                var v = voicings[i];
+                <div class="card p-4 space-y-2">
+                    <div class="flex items-center justify-between">
+                        <span class="text-sm font-semibold text-slate-900">#@(i + 1)</span>
+                        <span class="text-xs text-slate-400 font-mono">@v.Notes</span>
+                    </div>
+                    <ChordDiagram Chord="CurrentChord" Voicing="v" FretCount="7" Class="w-full h-auto" />
+                </div>
+            }
+        </section>
+    }
+    else
+    {
+        <p class="text-slate-500 text-sm">该和弦在当前弦组没有可弹奏的指型。</p>
+    }
+</section>
+
+@code {
+    private NoteName rootName = NoteName.C;
+    private string qualityName = ChordQuality.Major7.ToString();
+    private string typeName = "Drop2";
+    private string strings = "1234";
+    private IReadOnlyList<Voicing> voicings = Array.Empty<Voicing>();
+    private Chord? _chord;
+
+    private static readonly string[] SevenQualities =
+    {
+        ChordQuality.Major7.ToString(),
+        ChordQuality.Dominant7.ToString(),
+        ChordQuality.Minor7.ToString(),
+        ChordQuality.HalfDiminished7.ToString(),
+        ChordQuality.Diminished7.ToString(),
+        ChordQuality.MinorMajor7.ToString(),
+        ChordQuality.AugmentedMaj7.ToString(),
+        ChordQuality.Augmented7.ToString()
+    };
+
+    private Chord CurrentChord => _chord ??= Chord.Create(rootName, Enum.Parse<ChordQuality>(qualityName));
+
+    protected override void OnInitialized() => Refresh();
+
+    private void Refresh()
+    {
+        _chord = Chord.Create(rootName, Enum.Parse<ChordQuality>(qualityName));
+        var type = typeName == "Drop3" ? DropVoicings.DropType.Drop3 : DropVoicings.DropType.Drop2;
+        try
+        {
+            voicings = DropVoicings.Generate(CurrentChord, type, strings);
+        }
+        catch (ArgumentException)
+        {
+            voicings = Array.Empty<Voicing>();
+        }
+    }
+}

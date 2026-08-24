@@ -70,6 +70,9 @@ public sealed class LessonRenderer : ComponentBase
             case "tab":
                 RenderTab(b, ref seq, seg);
                 break;
+            case "voicing":
+                RenderVoicing(b, ref seq, seg);
+                break;
             case "callout":
                 b.OpenElement(seq++, "div");
                 b.AddAttribute(seq++, "class", "callout");
@@ -152,6 +155,48 @@ public sealed class LessonRenderer : ComponentBase
         b.OpenComponent<ChordDiagramComponent>(seq++);
         b.AddAttribute(seq++, "Chord", chord);
         b.AddAttribute(seq++, "Voicing", voicing);
+        b.CloseComponent();
+    }
+
+    // :::voicing chord="Cmaj7" type="drop2" strings="1234" inversion="0"
+    // Renders a specific drop voicing (or first matching) as a chord diagram.
+    private static void RenderVoicing(RenderTreeBuilder b, ref int seq, LessonSegment seg)
+    {
+        var chordName = LessonParser.AsString(seg.Args.GetValueOrDefault("chord"), "Cmaj7");
+        var type = LessonParser.AsString(seg.Args.GetValueOrDefault("type"), "drop2");
+        var strings = LessonParser.AsString(seg.Args.GetValueOrDefault("strings"), "1234");
+        var inversion = LessonParser.AsInt(seg.Args.GetValueOrDefault("inversion"), -1);
+
+        var chord = ChordName.Parse(chordName);
+        if (chord is null)
+        {
+            b.OpenElement(seq++, "div");
+            b.AddAttribute(seq++, "class", "text-xs text-amber-600");
+            b.AddContent(seq++, $"Cannot parse chord: {chordName}");
+            b.CloseElement();
+            return;
+        }
+
+        var dropType = type.Equals("drop3", StringComparison.OrdinalIgnoreCase)
+            ? DropVoicings.DropType.Drop3
+            : DropVoicings.DropType.Drop2;
+
+        IReadOnlyList<Voicing> all;
+        try
+        {
+            all = DropVoicings.Generate(chord, dropType, strings);
+        }
+        catch (ArgumentException)
+        {
+            all = Array.Empty<Voicing>();
+        }
+
+        var voicing = all.Count > 0 ? all[0] : null;
+
+        b.OpenComponent<ChordDiagramComponent>(seq++);
+        b.AddAttribute(seq++, "Chord", chord);
+        b.AddAttribute(seq++, "Voicing", voicing);
+        b.AddAttribute(seq++, "FretCount", 7);
         b.CloseComponent();
     }
 
