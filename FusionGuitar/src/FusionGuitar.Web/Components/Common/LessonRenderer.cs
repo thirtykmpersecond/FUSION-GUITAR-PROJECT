@@ -1,4 +1,5 @@
 using FusionGuitar.Web.Components.Common;
+using FusionGuitar.Web.Interop;
 using FusionGuitar.Web.Theory;
 using Microsoft.AspNetCore.Components;
 using Microsoft.AspNetCore.Components.Rendering;
@@ -7,6 +8,7 @@ using PianoComponent = FusionGuitar.Web.Components.PianoKeyboard.PianoKeyboard;
 using ChordDiagramComponent = FusionGuitar.Web.Components.ChordDiagram.ChordDiagram;
 using CircleComponent = FusionGuitar.Web.Components.CircleOfFifths.CircleOfFifths;
 using HarmonyComponent = FusionGuitar.Web.Components.HarmonyMap.HarmonyMap;
+using NotationComponent = FusionGuitar.Web.Components.Notation.Notation;
 
 namespace FusionGuitar.Web.Components.Common;
 
@@ -61,6 +63,9 @@ public sealed class LessonRenderer : ComponentBase
                 break;
             case "harmony":
                 RenderHarmony(b, ref seq, seg);
+                break;
+            case "staff":
+                RenderStaff(b, ref seq, seg);
                 break;
             case "callout":
                 b.OpenElement(seq++, "div");
@@ -159,6 +164,46 @@ public sealed class LessonRenderer : ComponentBase
         if (!Enum.TryParse<NoteName>(rootName, ignoreCase: true, out var root)) root = NoteName.C;
         b.OpenComponent<HarmonyComponent>(seq++);
         b.AddAttribute(seq++, "Root", root);
+        b.CloseComponent();
+    }
+
+    // :::staff clef="treble" key="C" time="4/4" notes="c/4/q d/4/q e/4/q f/4/q g/4/q a/4/q b/4/q c/5/h"
+    // For chords, join keys with '+': "c/4+e/4+g/4/w"
+    // VexFlow pitch format: <note-name>/<octave>, e.g. "c/4" = middle C, "c/5" = high C
+    // Duration: q (quarter), h (half), w (whole), 8 (eighth), 16, hr (half rest), wr (whole rest)
+    private static void RenderStaff(RenderTreeBuilder b, ref int seq, LessonSegment seg)
+    {
+        var clef = LessonParser.AsString(seg.Args.GetValueOrDefault("clef"), "treble");
+        var key = LessonParser.AsString(seg.Args.GetValueOrDefault("key"));
+        var time = LessonParser.AsString(seg.Args.GetValueOrDefault("time"));
+        var notesStr = LessonParser.AsString(seg.Args.GetValueOrDefault("notes"));
+
+        var notes = new List<NotationNote>();
+        if (!string.IsNullOrEmpty(notesStr))
+        {
+            foreach (var token in notesStr.Split(' ', StringSplitOptions.RemoveEmptyEntries))
+            {
+                var slashParts = token.Split('/');
+                if (slashParts.Length >= 3)
+                {
+                    var duration = slashParts[^1].ToLowerInvariant();
+                    // Rejoin middle parts in case octave contains chord split
+                    var pitchPart = string.Join('/', slashParts.Take(slashParts.Length - 1));
+                    var keys = pitchPart.Split('+')
+                        .Select(k => k.Trim().ToLowerInvariant())
+                        .Where(k => !string.IsNullOrEmpty(k))
+                        .ToArray();
+                    if (keys.Length > 0)
+                        notes.Add(new NotationNote(keys, duration));
+                }
+            }
+        }
+
+        b.OpenComponent<NotationComponent>(seq++);
+        b.AddAttribute(seq++, "Clef", clef);
+        if (!string.IsNullOrEmpty(key)) b.AddAttribute(seq++, "KeySignature", key);
+        if (!string.IsNullOrEmpty(time)) b.AddAttribute(seq++, "TimeSignature", time);
+        b.AddAttribute(seq++, "Notes", notes);
         b.CloseComponent();
     }
 }

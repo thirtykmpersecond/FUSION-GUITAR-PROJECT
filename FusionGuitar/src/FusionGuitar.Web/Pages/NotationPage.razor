@@ -1,0 +1,58 @@
+@page "/notation"
+
+<section class="space-y-6">
+    <header>
+        <h1 class="text-2xl font-semibold tracking-tight">乐谱演示 Notation</h1>
+        <p class="text-slate-500 text-sm mt-1">VexFlow 渲染的五线谱。</p>
+    </header>
+
+    <section class="card p-5 md:p-8 space-y-6">
+        <div>
+            <div class="text-xs uppercase tracking-wider text-slate-400 mb-2">C 大调音阶（C4 – C5）</div>
+            <Notation Clef="treble" KeySignature="C" TimeSignature="4/4"
+                      Notes="@cMajor" />
+        </div>
+
+        <div>
+            <div class="text-xs uppercase tracking-wider text-slate-400 mb-2">A 小调五声音阶</div>
+            <Notation Clef="treble" KeySignature="Am"
+                      Notes="@aPenta" />
+        </div>
+
+        <div>
+            <div class="text-xs uppercase tracking-wider text-slate-400 mb-2">Cmaj7 琶音</div>
+            <Notation Clef="treble" KeySignature="C"
+                      Notes="@cMaj7" />
+        </div>
+    </section>
+</section>
+
+@code {
+    // VexFlow pitch: "c/4" = middle C, duration q=quarter, h=half, w=whole, 8=eighth
+    private IReadOnlyList<NotationNote> cMajor = new[]
+    {
+        new NotationNote(new[] { "c/4" }, "q"),
+        new NotationNote(new[] { "d/4" }, "q"),
+        new NotationNote(new[] { "e/4" }, "q"),
+        new NotationNote(new[] { "f/4" }, "q"),
+        new NotationNote(new[] { "g/4" }, "q"),
+        new NotationNote(new[] { "a/4" }, "q"),
+        new NotationNote(new[] { "b/4" }, "q"),
+        new NotationNote(new[] { "c/5" }, "q"),
+    };
+
+    private IReadOnlyList<NotationNote> aPenta = new[]
+    {
+        new NotationNote(new[] { "a/4" }, "8"),
+        new NotationNote(new[] { "c/5" }, "8"),
+        new NotationNote(new[] { "d/5" }, "8"),
+        new NotationNote(new[] { "e/5" }, "8"),
+        new NotationNote(new[] { "g/5" }, "8"),
+        new NotationNote(new[] { "a/5" }, "8"),
+    };
+
+    private IReadOnlyList<NotationNote> cMaj7 = new[]
+    {
+        new NotationNote(new[] { "c/4", "e/4", "g/4", "b/4" }, "w"),
+    };
+}
