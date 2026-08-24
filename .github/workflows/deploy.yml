@@ -1,0 +1,64 @@
+name: Deploy to GitHub Pages
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  pages: write
+  id-token: write
+
+jobs:
+  build-and-deploy:
+    runs-on: ubuntu-latest
+    concurrency:
+      group: pages
+      cancel-in-progress: true
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '10.0.x'
+
+      - name: Setup Node (Tailwind)
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Install Tailwind
+        working-directory: FusionGuitar/src/FusionGuitar.Web
+        run: npm install
+
+      - name: Publish
+        working-directory: FusionGuitar/src/FusionGuitar.Web
+        run: dotnet publish -c Release -o publish
+
+      # GitHub Pages hosts the repo under /FUSION-GUITAR-PROJECT/; rewrite the
+      # base href and the service-worker core paths to match the repo path, then
+      # drop the precompressed (.br/.gz) copies of rewritten files so the plain
+      # (rewritten) files are served via content negotiation.
+      - name: Rewrite base path for Pages
+        working-directory: FusionGuitar/src/FusionGuitar.Web/publish/wwwroot
+        run: |
+          sed -i 's|<base href="/"|<base href="/FUSION-GUITAR-PROJECT/"|' index.html
+          sed -i "s|'/index.html'|'/FUSION-GUITAR-PROJECT/index.html'|; s|'/manifest.webmanifest'|'/FUSION-GUITAR-PROJECT/manifest.webmanifest'|; s|'/css/app.css'|'/FUSION-GUITAR-PROJECT/css/app.css'|; s|'/FusionGuitar.Web.styles.css'|'/FUSION-GUITAR-PROJECT/FusionGuitar.Web.styles.css'|; s|'/favicon.png'|'/FUSION-GUITAR-PROJECT/favicon.png'|; s|'/icon-192.png'|'/FUSION-GUITAR-PROJECT/icon-192.png'|" service-worker.js
+          sed -i 's|"/index.html"|"/FUSION-GUITAR-PROJECT/index.html"|; s|"/css/app.css"|"/FUSION-GUITAR-PROJECT/css/app.css"|; s|"/icon-192.png"|"/FUSION-GUITAR-PROJECT/icon-192.png"|; s|"start_url": "/"|"start_url": "/FUSION-GUITAR-PROJECT/"|; s|"scope": "/"|"scope": "/FUSION-GUITAR-PROJECT/"|' manifest.webmanifest
+          rm -f index.html.br index.html.gz
+          rm -f service-worker.js.br service-worker.js.gz
+          rm -f manifest.webmanifest.br manifest.webmanifest.gz
+          rm -f css/app.css.br css/app.css.gz
+          rm -f FusionGuitar.Web.styles.css.br FusionGuitar.Web.styles.css.gz
+          find js -name '*.br' -delete
+          find js -name '*.gz' -delete
+
+      - name: Deploy to GitHub Pages
+        uses: peaceiris/actions-gh-pages@v4
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          publish_dir: FusionGuitar/src/FusionGuitar.Web/publish/wwwroot
+          force_orphan: true

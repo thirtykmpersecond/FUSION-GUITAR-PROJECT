@@ -2,7 +2,7 @@
 
 > 本文档记录项目当前状态、技术栈、约定与踩坑，便于在新机器/新会话中快速恢复上下文。
 >
-> 最后更新：阶段 5 完成（Lick 库三联动、模块 6-7 课程）。
+> 最后更新：阶段 6 完成（深色模式、移动端、PWA、GitHub Pages 部署）。
 
 ## 1. 项目基本信息
 
@@ -108,6 +108,25 @@
 - 模块 7 `07-masters/` 7 节：Holdsworth、Metheny、Martino、Scofield、McLaughlin、Fusion 综合、大师研习法
 - 所有课程 Lick 引用经脚本校验均能在 `LickLibrary` 中解析
 
+### 阶段 6（打磨与发布）
+
+- **深色/浅色模式**：
+  - `index.html` 首帧前内联脚本读 `localStorage 'fg-theme'`（无保存时跟随 `prefers-color-scheme`）加 `.dark` class，避免闪白
+  - `Services/ThemeService.cs` + `wwwroot/js/theme.js`（`current`/`apply`/`toggle`）
+  - NavMenu 右上角切换按钮（日/月图标），`_dark` 状态驱动
+- **移动端**：
+  - `MainLayout` 手机顶部栏 + 汉堡菜单（`_menuOpen`），侧边栏 `fixed inset-x-0 top-14`，`NavigationManager.LocationChanged` 自动关菜单
+  - 课程表格 `display:block; overflow-x:auto`；`viewport-fit=cover`
+- **PWA**：
+  - `wwwroot/manifest.webmanifest`（name/short_name/icons/standalone/theme_color）
+  - `wwwroot/service-worker.js`：network-first + cache fallback，安装时缓存 CORE 外壳，离线导航回退 `index.html`
+  - `index.html` 注册 SW（`load` 事件后）、`apple-touch-icon`、`theme-color`
+- **性能**：`<link rel=preconnect>` / `dns-prefetch` 到 jsdelivr
+- **GitHub Pages 部署** `.github/workflows/deploy.yml`：
+  - 推送 main 自动 publish + 用 `peaceiris/actions-gh-pages` 发到 `gh-pages`
+  - **关键**：Pages 子路径 `/FUSION-GUITAR-PROJECT/` → 用 `sed` 重写 `<base href>`、SW CORE 路径、manifest `start_url`/`scope`/icon
+  - 重写后必须删除被重写文件的 `.br`/`.gz` 预压缩副本（否则静态托管内容协商会返回旧版）
+
 ## 4. 关键约定 & 踩过的坑
 
 1. **类名与命名空间冲突**：乐理类已改名为 `GuitarFretboard`；Renderer 里用 `using XXComponent = ...` 别名。
@@ -171,13 +190,15 @@ FUSION-GUITAR-PROJECT-PLAN/
     │   │                                  # Voicing, ChordName, DropVoicings, VoiceLeading,
     │   │                                  # Progression, Lick, LickLibrary, Enums
     │   ├── Interop/                       # AudioInterop, NotationInterop (+ events)
-    │   ├── Services/                      # LessonService, LessonModels, ProgressService
+    │   ├── Services/                      # LessonService, LessonModels, ProgressService, ThemeService
     │   ├── Pages/                         # Home, FretboardPage, PianoPage, NotationPage,
     │   │                                  # CirclePage, HarmonyPage, VoicingsPage,
     │   │                                  # ProgressionsPage, LicksPage, LessonPage, NotFound
     │   └── wwwroot/
-    │       ├── index.html                 # Tone@15 + VexFlow@4 CDN
-    │       ├── js/{audio.js,notation.js,interop.js}
+    │       ├── index.html                 # Tone@15 + VexFlow@4 CDN + 主题脚本 + SW 注册
+    │       ├── js/{audio.js,notation.js,interop.js,theme.js}
+    │       ├── manifest.webmanifest       # PWA
+    │       ├── service-worker.js          # PWA 离线
     │       └── lessons/
     │           ├── index.json             # 模块 1-7 课程目录
     │           ├── 01-basics/*.md         # 6 节
@@ -191,6 +212,9 @@ FUSION-GUITAR-PROJECT-PLAN/
         ├── FusionGuitar.Tests.csproj
         ├── Theory/{Note,Scale,Chord,Fretboard,DropVoicing,ChordName,Progression,Lick,LickLibrary}Tests.cs
         └── LessonParserTests.cs           # 含引号空格回归
+
+.gitignore 说明：`FusionGuitar/` 子目录下有 .gitignore，`**/wwwroot/css/app.css`（Tailwind 产物）。
+CI/CD：`.github/workflows/deploy.yml`（推送 main 自动发布 GitHub Pages）。
 ```
 
 ## 6. 环境要求（新机器）
@@ -221,6 +245,8 @@ dotnet publish FusionGuitar/src/FusionGuitar.Web -c Release -o ./publish
 ## 7. 提交历史（按时间倒序，关键提交）
 
 ```
+bbf9adc  feat(stage6): dark mode toggle, mobile menu, PWA offline, perf
+70a50b3  docs: refresh README and PROJECT-CONTEXT for stage 5
 d3d1be7  feat(lessons): module 7 masters + master-style licks
 4811529  feat(lessons): module 6 improvisation + register modules 6-7
 6de6617  feat(licks): lick library, /licks browser page, :::lick directive
@@ -243,17 +269,15 @@ f287fdf  docs(lessons): revise 3NPS lesson with accurate tab and pattern table
 86fe6d4  chore: bootstrap Fusion Guitar stage 1
 ```
 
-## 8. 下一步：阶段 6（尚未开始）
+## 8. 下一步：规划已全部完成
 
-按计划文档：
+计划文档定义的 6 大阶段全部落地。可选后续增强：
 
-1. 深色 / 浅色模式切换
-2. 移动端深度适配（手机 / 平板练琴场景）
-3. PWA 离线支持
-4. 性能优化
-5. 部署（GitHub Pages / 自有服务器）与多设备进度同步
-6. 乐谱与钢琴键盘联动（点击乐谱高亮钢琴位置，阶段 5 只做了指板联动）
-5. `<ChordDiagram>` 支持 Drop2+4 / Drop 扩展（目前 Drop3 已支持）
+1. 乐谱与钢琴键盘联动（点击乐谱高亮钢琴位置，当前只做了指板联动）
+2. 更多大师 Lick / 用户自定义 Lick
+3. 多设备进度同步（需要后端 / 数据库）
+4. Tone.js 换采样音色、真实吉他音源
+5. 多语言（EN）
 
 ## 9. 风格 / 代码约定
 
@@ -268,9 +292,8 @@ f287fdf  docs(lessons): revise 3NPS lesson with accurate tab and pattern table
 ## 10. 已知遗留小问题
 
 - `audio.js` 和 `interop.js` 有重复代码，未来只保留 `interop.js`
-- `<ChordDiagram>` 目前依赖 DropVoicings 生成的 Fingering；开放把位与 Drop voicings 均可用
-- 深色模式 class 已留但还没有切换按钮（阶段 6）
-- 移动端布局仅基础响应式（`md:` 断点），未深度适配（阶段 6）
-- `ProgressService` 用 `localStorage`，未做多设备同步（阶段 6）
-- VexFlow / Tone.js 走 CDN，离线场景待 PWA 阶段本地化（阶段 6）
+- `ProgressService` 用 `localStorage`，未做多设备同步（需要后端）
+- VexFlow / Tone.js 走 CDN（PWA 网络优先缓存，已实现离线回退；但 CDN 首次加载仍需联网）
 - LickPlayer 的 VexFlow 音符高亮基于 bounding box 叠环；TAB-only / 换行重绘场景未全覆盖测试（浏览器端）
+- 乐谱与钢琴键盘联动尚未做（阶段 5 只做了指板联动）
+- GitHub Pages 子路径部署依赖 `deploy.yml` 的 sed 重写；若改仓库名需同步更新 workflow

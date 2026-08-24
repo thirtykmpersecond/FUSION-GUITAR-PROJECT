@@ -2,7 +2,7 @@
 
 面向电吉他手的系统 Fusion / Jazz 乐理教材，以交互式 Web 应用形式呈现：可点击发声的指板图、钢琴键盘、和弦图，配合 VexFlow 渲染的五线谱与吉他六线谱（TAB），以及可循环变速的音频播放器。中文为主，术语附英文对照。
 
-> 当前处于 **阶段 5 完成**：乐理引擎、课程框架、交互式组件、VexFlow 乐谱（含 TAB）、五度圈、和声地图、Drop2/Drop3 引擎、和弦进行播放器、模块 1-7 课程、以及乐谱+指板+音频三联动 Lick 库均已落地。详细路线图见 [FUSION-GUITAR-PROJECT-PLAN.md](./FUSION-GUITAR-PROJECT-PLAN.md)。
+> 当前处于 **阶段 6 完成**：七大学模块课程、乐谱+指板+音频三联动、深色/浅色模式、移动端菜单、PWA 离线支持与 GitHub Pages 自动部署均已落地。详细路线图见 [FUSION-GUITAR-PROJECT-PLAN.md](./FUSION-GUITAR-PROJECT-PLAN.md)。
 
 ## 技术栈
 
@@ -168,9 +168,29 @@ dotnet publish FusionGuitar/src/FusionGuitar.Web -c Release -o ./publish
 - 模块 7 课程 7 节：Holdsworth、Metheny、Martino、Scofield、McLaughlin、Fusion 综合、大师研习法（大师 Lick 加厚版）
 - Notation/Fretboard/AudioInterop 均支持逐音回调与高亮（`NotationEvents` / `SequenceEvents`）
 
+### 阶段 6：打磨与发布
+
+- **深色 / 浅色模式**：`ThemeService` + `js/theme.js`，localStorage 持久化 + 跟随系统偏好，首帧前内联脚本避免闪白；NavMenu 一键切换按钮
+- **移动端适配**：手机顶部栏 + 汉堡菜单（导航自动关闭）、侧边栏可折叠、课程表格 `overflow-x` 横向滚动、`viewport-fit=cover`
+- **PWA 离线**：`manifest.webmanifest`（standalone + 图标）、`service-worker.js`（network-first + 离线 shell 回退）、`apple-touch-icon`、`theme-color`
+- **性能**：jsdelivr CDN `preconnect` / `dns-prefetch`、SVG 组件响应式缩放
+- **GitHub Pages 自动部署**：`.github/workflows/deploy.yml`，推送 main 自动发布，含 base-path 重写与预压缩文件处理
+
 ## 后续路线
 
-- 阶段 6：深色模式切换、移动端深度适配、PWA、部署与多设备同步
+- 项目已到最终形态：7 大教学模块、交互式乐理工具、Lick 三联动、深色模式、移动端、PWA 全部完成
+- 可选增强：乐谱与钢琴键盘联动、更多大师 Lick、多设备进度同步（后端）、Tone.js 换更好的采样音色
+
+## 部署
+
+推送到 `main` 后，GitHub Actions 会自动发布到 GitHub Pages：
+`https://thirtykmpersecond.github.io/FUSION-GUITAR-PROJECT/`
+
+也可以在 Settings → Pages 里用 Actions 部署（默认已配置）。本地发布：
+
+```bash
+dotnet publish FusionGuitar/src/FusionGuitar.Web -c Release -o ./publish
+```
 
 ## License
 
