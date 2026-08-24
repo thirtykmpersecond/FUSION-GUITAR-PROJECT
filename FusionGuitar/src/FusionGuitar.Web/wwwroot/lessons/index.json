@@ -44,6 +44,36 @@
         { "slug": "06-application-ii-v-i", "title": "应用：ii–V–I", "summary": "最经典的爵士进行与音阶选择。", "order": 6, "tags": ["chord-scale"] },
         { "slug": "07-application-static", "title": "应用：静态和弦", "summary": "一个和弦铺底时如何切换调式制造张力。", "order": 7, "tags": ["chord-scale"] }
       ]
+    },
+    {
+      "id": "04-advanced-harmony",
+      "title": "04 高级和声",
+      "description": "Shell voicings、Drop2/Drop3、三全音替代、次属和弦、重配和声与上层结构。",
+      "order": 4,
+      "lessons": [
+        { "slug": "01-shell-voicings", "title": "Shell 和弦与 3-7 连接", "summary": "只用 3 和 7 两个音确定和弦身份，声部连接的最简骨架。", "order": 1, "tags": ["harmony","voicing"] },
+        { "slug": "02-drop2-intro", "title": "Drop2 和弦入门", "summary": "关闭位降第二音成 Drop2，三个弦组 × 四转位。", "order": 2, "tags": ["voicing"] },
+        { "slug": "03-drop2-inversions", "title": "Drop2 转位与声部连接", "summary": "四转位爬指板，ii–V–I 用最近声部连接。", "order": 3, "tags": ["voicing","voice-leading"] },
+        { "slug": "04-drop3", "title": "Drop3 与 Drop2+4", "summary": "降第三音的开阔和声，低音区填充。", "order": 4, "tags": ["voicing"] },
+        { "slug": "05-tritone-sub", "title": "三全音替代", "summary": "共享三全音，属和弦的 bII 替代。", "order": 5, "tags": ["harmony"] },
+        { "slug": "06-secondary-dominants", "title": "次属和弦与连锁 ii–V", "summary": "给任意和弦配属，Backcycling 反向循环。", "order": 6, "tags": ["harmony"] },
+        { "slug": "07-reharmonization", "title": "重配和声", "summary": "保持旋律换和弦：级数重配、替代、调式互换。", "order": 7, "tags": ["harmony"] },
+        { "slug": "08-upper-structures", "title": "上层结构与 So What", "summary": "Upper Structure 与 So What 叠置和弦。", "order": 8, "tags": ["harmony","fusion"] }
+      ]
+    },
+    {
+      "id": "05-rhythm",
+      "title": "05 Fusion 节奏",
+      "description": "节奏感觉、伴奏节奏型、Bossa、Funk、奇数拍与 Rhythm Changes。",
+      "order": 5,
+      "lessons": [
+        { "slug": "01-time-feel", "title": "节奏感觉：Straight / Swing / 16th", "summary": "直拍、摇摆、十六分三种感觉的区别。", "order": 1, "tags": ["rhythm"] },
+        { "slug": "02-comping-patterns", "title": "伴奏基础节奏型", "summary": "Charleston、Anticipation 与切分。", "order": 2, "tags": ["rhythm","comping"] },
+        { "slug": "03-bossa-nova", "title": "Bossa Nova 吉他节奏", "summary": "Bossa / Samba 的拇指与和弦节奏。", "order": 3, "tags": ["rhythm","latin"] },
+        { "slug": "04-funk-rhythm", "title": "Funk 节奏与闷音", "summary": "16 分音符 Funk 刷弦与闷音。", "order": 4, "tags": ["rhythm","funk"] },
+        { "slug": "05-odd-meters", "title": "奇数拍 5/4、7/8", "summary": "Take Five、Money 类奇数拍。", "order": 5, "tags": ["rhythm","meter"] },
+        { "slug": "06-rhythm-changes", "title": "Rhythm Changes", "summary": "I–VI–II–V 结构与经典伴奏。", "order": 6, "tags": ["rhythm","standard"] }
+      ]
     }
   ]
 }
