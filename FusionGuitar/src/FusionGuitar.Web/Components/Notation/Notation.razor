@@ -1,10 +1,13 @@
 @inject Interop.NotationInterop NotationJs
+@implements IAsyncDisposable
 
 <div id="@_id" class="@Class" style="min-height:@(_height)px; overflow-x:auto;"></div>
 
 @code {
     private static int _counter;
     private readonly string _id = $"vex-{System.Threading.Interlocked.Increment(ref _counter)}";
+    private readonly Interop.NotationEvents _events = new();
+    private DotNetObjectReference<Interop.NotationEvents>? _eventsRef;
     private int _height = 170;
     private bool _firstRender = true;
     private int _lastHash;
@@ -16,6 +19,16 @@
     [Parameter] public string? KeySignature { get; set; }
     [Parameter] public int Width { get; set; } = 540;
     [Parameter] public string Class { get; set; } = "";
+    [Parameter] public EventCallback<int> OnNoteClick { get; set; }
+    [Parameter] public int? HighlightedIndex { get; set; }
+
+    protected override void OnInitialized()
+    {
+        _events.NoteClicked += idx => InvokeAsync(async () =>
+        {
+            if (OnNoteClick.HasDelegate) await OnNoteClick.InvokeAsync(idx);
+        });
+    }
 
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
@@ -28,12 +41,21 @@
             await Task.Yield();
             try
             {
-                await NotationJs.RenderStaveAsync(_id, Width, Clef, TimeSignature, KeySignature, Notes, TabNotes);
+                _eventsRef ??= DotNetObjectReference.Create(_events);
+                await NotationJs.RenderStaveAsync(_id, Width, Clef, TimeSignature, KeySignature, Notes, TabNotes, _eventsRef);
             }
             catch (Exception ex)
             {
                 Console.WriteLine($"[Notation] render failed: {ex.Message}");
             }
+        }
+        if (HighlightedIndex is int hi)
+        {
+            await NotationJs.HighlightNoteAsync(_id, hi, "#ef4444");
+        }
+        else
+        {
+            await NotationJs.ClearHighlightAsync(_id);
         }
     }
 
@@ -52,5 +74,11 @@
             foreach (var p in t.Positions) { h.Add(p.String); h.Add(p.Fret); }
         }
         return h.ToHashCode();
+    }
+
+    public async ValueTask DisposeAsync()
+    {
+        _eventsRef?.Dispose();
+        _eventsRef = null;
     }
 }

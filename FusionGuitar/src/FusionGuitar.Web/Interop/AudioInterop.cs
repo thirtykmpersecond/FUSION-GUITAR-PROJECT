@@ -62,6 +62,22 @@ public sealed class AudioInterop(IJSRuntime js) : IAsyncDisposable
         await m.InvokeVoidAsync("stopProgression");
     }
 
+    public async ValueTask<int> PlaySequenceAsync(
+        IReadOnlyList<LickNoteDto> notes,
+        int bpm,
+        DotNetObjectReference<SequenceEvents>? onNote = null)
+    {
+        var m = await _module.Value;
+        var dto = notes.Select(n => new { midi = n.Midi, beats = n.Beats }).ToArray();
+        return await m.InvokeAsync<int>("scheduleSequence", dto, bpm, onNote);
+    }
+
+    public async ValueTask StopSequenceAsync()
+    {
+        var m = await _module.Value;
+        await m.InvokeVoidAsync("stopSequence");
+    }
+
     public async ValueTask DisposeAsync()
     {
         if (_module.IsValueCreated)
@@ -70,6 +86,17 @@ public sealed class AudioInterop(IJSRuntime js) : IAsyncDisposable
             await m.DisposeAsync();
         }
     }
+}
+
+public sealed record LickNoteDto(int Midi, double Beats);
+
+/// <summary>Receives per-note playback callbacks (for synced highlighting).</summary>
+public sealed class SequenceEvents
+{
+    public event Action<int>? NoteStarted;
+
+    [JSInvokable]
+    public void OnNote(int index) => NoteStarted?.Invoke(index);
 }
 
 public sealed record ProgressionChord(IReadOnlyList<string> Notes, string Duration);

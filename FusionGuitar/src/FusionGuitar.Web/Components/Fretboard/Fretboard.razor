@@ -51,6 +51,16 @@
                   style="@(ShowLabels ? "" : "display:none;")">@label</text>
         </g>
     }
+
+    @if (Highlight is { } hl)
+    {
+        var hx = NoteX(hl.Fret);
+        var hy = StringY(hl.StringIndex);
+        <g>
+            <circle cx="@hx" cy="@hy" r="@(NoteRadius + 5)" fill="none"
+                    stroke="#f59e0b" stroke-width="3" class="animate-pulse" />
+        </g>
+    }
 </svg>
 
 @code {
@@ -65,6 +75,7 @@
     [Parameter] public string NoteColor { get; set; } = "#5a6cf5";
     [Parameter] public string RootColor { get; set; } = "#ef4444";
     [Parameter] public string Class { get; set; } = "w-full h-auto";
+    [Parameter] public (int StringIndex, int Fret)? Highlight { get; set; }
 
     private const double NutWidth = 10;
     private const double FretSpacing = 40;

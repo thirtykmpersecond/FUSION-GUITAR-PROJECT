@@ -1,0 +1,204 @@
+@inject Interop.AudioInterop Audio
+@implements IAsyncDisposable
+
+<div class="card p-4 md:p-5 space-y-4">
+    <div class="flex flex-wrap items-center justify-between gap-2">
+        <div>
+            <div class="font-semibold text-slate-900">@Lick.Name</div>
+            @if (!string.IsNullOrEmpty(Lick.Description))
+            {
+                <div class="text-xs text-slate-500 mt-0.5">@Lick.Description</div>
+            }
+            <div class="text-[11px] text-slate-400 mt-1">
+                @Lick.Style
+                @if (!string.IsNullOrEmpty(Lick.Key)) { <span>· @Lick.Key</span> }
+                @if (!string.IsNullOrEmpty(Lick.Backing)) { <span>· 背景 @Lick.Backing</span> }
+            </div>
+        </div>
+        <div class="flex items-center gap-2 flex-wrap">
+            <span class="text-xs text-slate-500">速度</span>
+            @foreach (var sp in new[] { 0.5, 0.75, 1.0 })
+            {
+                <button class="chip @(_speed == sp ? "chip-active" : "")"
+                        @onclick="() => SetSpeed(sp)">@(sp)x</button>
+            }
+        </div>
+    </div>
+
+    <div class="flex items-center gap-2">
+        <button class="btn" @onclick="TogglePlay">
+            @(_playing ? "■ 停止" : "▶ 播放")
+        </button>
+        <button class="btn-ghost border border-slate-200" @onclick="StopAll" @disabled="@(!_playing && _active < 0)">
+            ⏹ 重置
+        </button>
+    </div>
+
+    <div class="grid grid-cols-1 lg:grid-cols-2 gap-4">
+        <div class="space-y-1">
+            <div class="text-xs uppercase tracking-wider text-slate-400">乐谱 / TAB</div>
+            <Notation Notes="_notation" TabNotes="_tab"
+                      KeySignature="_keyForClef" Class="w-full" Width="500"
+                      HighlightedIndex="_active" OnNoteClick="OnNoteClicked" />
+        </div>
+        <div class="space-y-1">
+            <div class="text-xs uppercase tracking-wider text-slate-400">指板</div>
+            <Fretboard Notes="_fretNotes" Frets="15"
+                       Highlight="(_activeFret ?? null)"
+                       Class="w-full h-auto" />
+        </div>
+    </div>
+
+    <div class="flex flex-wrap gap-1.5">
+        @for (int i = 0; i < _notes.Count; i++)
+        {
+            var idx = i;
+            <button class="chip @(_active == idx ? "chip-active" : "")"
+                    @onclick="() => Seek(idx)">
+                <span class="text-[11px]">@_labels[idx]</span>
+            </button>
+        }
+    </div>
+</div>
+
+@code {
+    private readonly Interop.SequenceEvents _seqEvents = new();
+    private DotNetObjectReference<Interop.SequenceEvents>? _seqRef;
+
+    [Parameter, EditorRequired] public Lick Lick { get; set; } = default!;
+    [Parameter] public int Bpm { get; set; } = 100;
+
+    private bool _playing;
+    private double _speed = 1.0;
+    private int _active = -1;
+    private (int, int)? _activeFret;
+
+    private List<Interop.NotationNote> _notation = new();
+    private List<Interop.TabNote> _tab = new();
+    private List<FretNote> _fretNotes = new();
+    private List<string> _labels = new();
+    private IReadOnlyList<LickNote> _notes = Array.Empty<LickNote>();
+    private string _keyForClef = "";
+
+    private static readonly string[] NoteLetters =
+        { "C", "C#", "D", "D#", "E", "F", "F#", "G", "G#", "A", "A#", "B" };
+
+    protected override void OnInitialized()
+    {
+        _seqEvents.NoteStarted += idx => InvokeAsync(() => SetActive(idx));
+        BuildViews();
+    }
+
+    private void BuildViews()
+    {
+        _notes = Lick.Notes ?? Array.Empty<LickNote>();
+        _notation = new List<Interop.NotationNote>();
+        _tab = new List<Interop.TabNote>();
+        _fretNotes = new List<FretNote>();
+        _labels = new List<string>();
+
+        foreach (var n in _notes)
+        {
+            var dur = DurationFor(n.Beats);
+            _notation.Add(new Interop.NotationNote(new[] { MidiToName(n.Midi) }, dur));
+            _labels.Add(MidiToName(n.Midi));
+
+            if (n.StringIndex is int s && n.Fret is int f)
+            {
+                // Guitar convention (0 = low E) -> VexFlow (1 = high E).
+                _tab.Add(new Interop.TabNote(new[] { new Interop.TabPosition(6 - s, f) }, dur));
+                var note = new Note(n.Midi);
+                _fretNotes.Add(new FretNote(s, f, note, false));
+            }
+        }
+
+        // Key signature: guess from the most common accidental? Leave empty for C-style
+        // unless a key is specified on the Lick.
+        _keyForClef = Lick.Key ?? "";
+    }
+
+    private static string MidiToName(int midi)
+    {
+        var pc = ((midi % 12) + 12) % 12;
+        var oct = Math.Floor(midi / 12.0) - 1;
+        return NoteLetters[pc] + oct;
+    }
+
+    private static string DurationFor(double beats)
+    {
+        if (beats >= 1.75) return "h";
+        if (beats >= 0.75) return "q";
+        if (beats >= 0.4) return "8";
+        return "16";
+    }
+
+    private int EffectiveBpm => (int)Math.Round(Bpm * _speed);
+
+    private async Task TogglePlay()
+    {
+        if (_playing)
+        {
+            await StopAll();
+            return;
+        }
+        if (_notes.Count == 0) return;
+        _playing = true;
+        _active = -1;
+        _seqRef ??= DotNetObjectReference.Create(_seqEvents);
+        await Audio.PlaySequenceAsync(_notes.Select(n => new LickNoteDto(n.Midi, n.Beats)).ToList(), EffectiveBpm, _seqRef);
+    }
+
+    private async Task StopAll()
+    {
+        _playing = false;
+        _active = -1;
+        _activeFret = null;
+        await Audio.StopSequenceAsync();
+    }
+
+    private void SetSpeed(double sp)
+    {
+        _speed = sp;
+        // If playing, restart with new speed.
+        _ = Task.Run(async () =>
+        {
+            if (_playing)
+            {
+                await Audio.StopSequenceAsync();
+                await TogglePlay();
+            }
+        });
+    }
+
+    private void SetActive(int idx)
+    {
+        if (idx < 0 || idx >= _notes.Count) return;
+        _active = idx;
+        var n = _notes[idx];
+        _activeFret = (n.StringIndex, n.Fret) is (int s, int f) ? (s, f) : null;
+        StateHasChanged();
+    }
+
+    private async Task Seek(int idx)
+    {
+        _active = idx;
+        var n = _notes[idx];
+        _activeFret = (n.StringIndex, n.Fret) is (int s, int f) ? (s, f) : null;
+        await Audio.PlayMidiAsync(n.Midi, 0.5);
+        StateHasChanged();
+    }
+
+    private Task OnNoteClicked(int idx)
+    {
+        if (idx >= 0 && idx < _notes.Count)
+            return Seek(idx);
+        return Task.CompletedTask;
+    }
+
+    public async ValueTask DisposeAsync()
+    {
+        _seqRef?.Dispose();
+        _seqRef = null;
+        await Audio.StopSequenceAsync();
+    }
+}

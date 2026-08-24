@@ -119,6 +119,33 @@ export function stopProgression() {
     if (Tone.Transport.state === 'started') Tone.Transport.stop();
 }
 
+// notes: [{ midi, beats }]; plays each note in sequence, calling onNote(index)
+// as each note sounds. Returns the number of notes scheduled.
+export async function scheduleSequence(notes, bpm, onNote) {
+    await init();
+    if (typeof Tone === 'undefined' || !notes || !notes.length) return 0;
+    stopProgression();
+    setBpm(bpm);
+    let cursor = 0;
+    notes.forEach((n, i) => {
+        const secs = n.beats * (60 / bpm);
+        const dur = Math.max(secs * 0.9, 0.12);
+        const id = Tone.Transport.schedule((time) => {
+            poly.triggerAttackRelease(midiToNote(n.midi), dur, time);
+            if (onNote && typeof onNote === 'function') onNote(i);
+        }, cursor);
+        scheduledIds.push(id);
+        cursor += secs;
+    });
+    Tone.Transport.loop = false;
+    await Tone.Transport.start();
+    return notes.length;
+}
+
+export function stopSequence() {
+    stopProgression();
+}
+
 export function transposeNotes(notes, semitones) {
     return notes.map(n => {
         if (typeof n === 'number') return midiToNote(n + semitones);

@@ -14,7 +14,8 @@ public sealed class NotationInterop(IJSRuntime js) : IAsyncDisposable
         string? timeSig,
         string? keySig,
         IReadOnlyList<NotationNote> notes,
-        IReadOnlyList<TabNote>? tabNotes = null)
+        IReadOnlyList<TabNote>? tabNotes = null,
+        DotNetObjectReference<NotationEvents>? events = null)
     {
         var m = await _module.Value;
         var dto = notes.Select(n => new
@@ -34,8 +35,21 @@ public sealed class NotationInterop(IJSRuntime js) : IAsyncDisposable
             timeSig,
             keySig,
             notes = dto,
-            tabNotes = tabDto
+            tabNotes = tabDto,
+            onNoteClick = events
         });
+    }
+
+    public async ValueTask HighlightNoteAsync(string elementId, int index, string color = "#ef4444")
+    {
+        var m = await _module.Value;
+        await m.InvokeVoidAsync("highlightNote", elementId, index, color);
+    }
+
+    public async ValueTask ClearHighlightAsync(string elementId)
+    {
+        var m = await _module.Value;
+        await m.InvokeVoidAsync("clearHighlight", elementId);
     }
 
     public async ValueTask DisposeAsync()
@@ -46,6 +60,15 @@ public sealed class NotationInterop(IJSRuntime js) : IAsyncDisposable
             await m.DisposeAsync();
         }
     }
+}
+
+/// <summary>Receives note-click callbacks from the rendered notation.</summary>
+public sealed class NotationEvents
+{
+    public event Action<int>? NoteClicked;
+
+    [JSInvokable]
+    public void OnNoteClick(int index) => NoteClicked?.Invoke(index);
 }
 
 public sealed record NotationNote(IReadOnlyList<string> Keys, string Duration);
