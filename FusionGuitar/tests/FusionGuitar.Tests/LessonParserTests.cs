@@ -57,4 +57,38 @@ public class LessonParserTests
         Assert.Equal("Blues", LessonParser.AsString(seg.Args["scale"]));
         Assert.Equal(15, LessonParser.AsInt(seg.Args["frets"], 0));
     }
+
+    [Fact]
+    public void Directive_QuotedValueWithSpaces_PreservesWholeValue()
+    {
+        // Regression: Tokenizer used to split at the first space inside a
+        // quoted value, mangling notes="..." / scale="Pentatonic Minor" and
+        // causing VexFlow "Invalid key name" errors.
+        var seg = Assert.Single(LessonParser.Parse(
+            ":::staff clef=\"treble\" key=\"Am\" notes=\"a/4/8 c/5/8 d/5/8\""));
+        Assert.Equal("staff", seg.Component);
+        Assert.Equal("treble", LessonParser.AsString(seg.Args["clef"]));
+        Assert.Equal("Am", LessonParser.AsString(seg.Args["key"]));
+        Assert.Equal("a/4/8 c/5/8 d/5/8", LessonParser.AsString(seg.Args["notes"]));
+    }
+
+    [Fact]
+    public void Directive_MultipleQuotedValuesWithSpaces_ParsesAll()
+    {
+        var seg = Assert.Single(LessonParser.Parse(
+            ":::staff clef=\"treble\" key=\"C\" time=\"4/4\" " +
+            "notes=\"c/4/q d/4/8\" tab=\"6:8 5:10 4:12\""));
+        Assert.Equal("C", LessonParser.AsString(seg.Args["key"]));
+        Assert.Equal("4/4", LessonParser.AsString(seg.Args["time"]));
+        Assert.Equal("c/4/q d/4/8", LessonParser.AsString(seg.Args["notes"]));
+        Assert.Equal("6:8 5:10 4:12", LessonParser.AsString(seg.Args["tab"]));
+    }
+
+    [Fact]
+    public void Directive_ScaleNameWithSpace_Preserves()
+    {
+        var seg = Assert.Single(LessonParser.Parse(
+            ":::fretboard root=\"A\" scale=\"Pentatonic Minor\" frets=12"));
+        Assert.Equal("Pentatonic Minor", LessonParser.AsString(seg.Args["scale"]));
+    }
 }

@@ -128,17 +128,30 @@ public static class LessonParser
             while (i < s.Length && char.IsWhiteSpace(s[i])) i++;
             if (i >= s.Length) break;
             int start = i;
-            char quote = s[i] is '"' or '\'' ? s[i] : '\0';
-            if (quote != '\0')
+
+            // Form: key="quoted value with spaces"
+            // Read up to '=' then, if next char is a quote, read until closing quote.
+            int eq = -1;
+            int j = i;
+            while (j < s.Length && !char.IsWhiteSpace(s[j]) && s[j] != '=') j++;
+            if (j < s.Length && s[j] == '=')
             {
-                i++;
-                while (i < s.Length && s[i] != quote) i++;
-                if (i < s.Length) i++;
+                eq = j;
+                j++; // past '='
+                if (j < s.Length && (s[j] == '"' || s[j] == '\''))
+                {
+                    char q = s[j];
+                    j++;
+                    while (j < s.Length && s[j] != q) j++;
+                    if (j < s.Length) j++; // include closing quote
+                    result.Add(s[start..j]);
+                    i = j;
+                    continue;
+                }
             }
-            else
-            {
-                while (i < s.Length && !char.IsWhiteSpace(s[i])) i++;
-            }
+
+            // Unquoted token: read until whitespace
+            while (i < s.Length && !char.IsWhiteSpace(s[i])) i++;
             result.Add(s[start..i]);
         }
         return result;
