@@ -2,7 +2,7 @@
 
 面向电吉他手的系统 Fusion / Jazz 乐理教材，以交互式 Web 应用形式呈现：可点击发声的指板图、钢琴键盘、和弦图，配合 VexFlow 渲染的五线谱与吉他六线谱（TAB），以及可循环变速的音频播放器。中文为主，术语附英文对照。
 
-> 当前处于 **阶段 3 完成**：乐理引擎、课程框架、交互式组件、VexFlow 乐谱（含 TAB）、五度圈、和声地图、模块 1-3 课程均已落地。详细路线图见 [FUSION-GUITAR-PROJECT-PLAN.md](./FUSION-GUITAR-PROJECT-PLAN.md)。
+> 当前处于 **阶段 4 完成**：乐理引擎、课程框架、交互式组件、VexFlow 乐谱（含 TAB）、五度圈、和声地图、模块 1-5 课程、Drop2/Drop3 引擎与和弦进行播放器均已落地。详细路线图见 [FUSION-GUITAR-PROJECT-PLAN.md](./FUSION-GUITAR-PROJECT-PLAN.md)。
 
 ## 技术栈
 
@@ -11,30 +11,33 @@
 - [Tone.js](https://tonejs.github.io/)（经 JS Interop 调用，音频合成与回放）
 - [VexFlow 4.2.3](https://www.vexflow.com/)（CDN UMD，`Vex.Flow` 全局变量，渲染五线谱与 TAB）
 - [Markdig](https://github.com/xoofx/markdig)（Markdown 解析 + 自定义 `:::` 组件指令）
-- xUnit（乐理引擎、解析器单元测试，共 48 个）
+- xUnit（乐理引擎、解析器单元测试，共 73 个）
 
 ## 目录结构
 
 ```
 FusionGuitar/
 ├── src/FusionGuitar.Web/
-│   ├── Theory/            # 乐理引擎：Note / Interval / Scale / Chord / GuitarFretboard / Voicing / Enums
+│   ├── Theory/            # 乐理引擎：Note / Interval / Scale / Chord / GuitarFretboard
+│   │                      #            / Voicing / ChordName / DropVoicings / Progression
 │   ├── Components/
 │   │   ├── Fretboard/     # 指板 SVG
 │   │   ├── PianoKeyboard/ # 钢琴键盘
-│   │   ├── ChordDiagram/  # 和弦框
+│   │   ├── ChordDiagram/  # 和弦框（支持横按）
 │   │   ├── Notation/      # VexFlow 五线谱 + TAB 组件
 │   │   ├── CircleOfFifths/# 五度圈
 │   │   ├── HarmonyMap/    # 和声替代网络
-│   │   ├── AudioPlayer/   # 音频回放（循环 / 变速）
+│   │   ├── AudioPlayer/   # 音频回放（循环 / 变速 / 节拍器 / 进行播放）
 │   │   ├── Layout/        # MainLayout / NavMenu
 │   │   └── Common/        # LessonParser / LessonRenderer
 │   ├── Interop/           # C# → JS：AudioInterop / NotationInterop
 │   ├── Services/          # LessonService / ProgressService
-│   ├── Pages/             # Home / Fretboard / Piano / Notation / Circle / Harmony / Lesson
+│   ├── Pages/             # Home / Fretboard / Piano / Notation / Circle / Harmony
+│   │                      # / Voicings / Progressions / Lesson
 │   ├── wwwroot/
 │   │   ├── js/            # audio.js / notation.js / interop.js
-│   │   ├── lessons/       # 01-basics / 02-modes / 03-chord-scale + index.json
+│   │   ├── lessons/       # 01-basics / 02-modes / 03-chord-scale
+│   │   │                  # 04-advanced-harmony / 05-rhythm + index.json
 │   │   └── index.html     # 引入 Tone.js + VexFlow CDN
 │   └── Styles/app.css     # Tailwind 入口
 └── tests/FusionGuitar.Tests/
@@ -93,10 +96,14 @@ dotnet publish FusionGuitar/src/FusionGuitar.Web -c Release -o ./publish
          notes="c/4/8 d/4/8 e/4/8 f/4/8"
          tab="5:3 4:0 4:2 4:3"
 :::tab notes="6:0+5:2+4:2/q 3:1+2:0+1:0/h"
+:::voicing chord="Cmaj7" type="drop2" strings="1234"
+:::progression chords="Dm7,G7,Cmaj7" bpm="80" title="ii–V–I"
 ```
 
 - `:::staff`：VexFlow 五线谱；`notes` 格式为 `pitch/octave/duration`（`+` 连接同时发声的和弦音），`tab` 可选，提供时自动在下方渲染对齐的六线谱。
 - `:::tab`：纯六线谱；`notes` 格式为 `string:fret/duration`，多弦用 `+` 连接。TAB 弦号遵循 VexFlow 约定：`1` = 高音 E 弦，`6` = 低音 E 弦。
+- `:::voicing`：渲染一个 Drop2/Drop3 和弦指型图（`type` = `drop2` / `drop3`，`strings` 为弦组，`1` 表示高音 E 弦）。
+- `:::progression`：循环播放和弦进行（`chords` 用逗号分隔，`Dm7:2` 表示两小节）。
 - `key="C"` / `key="Am"` 等无升降号调会被自动跳过（VexFlow 4 不接受空调号字符串）。
 - 所有带引号的属性值**支持内含空格**（解析器已修复）。
 
@@ -130,10 +137,22 @@ dotnet publish FusionGuitar/src/FusionGuitar.Web -c Release -o ./publish
 - 模块 3 课程 7 节：大调 / 旋律小调 / 和声小调 Chord-Scale、全音 / 减音阶、ii-V-I 应用
 - `/notation` 演示页，`/circle`、`/harmony` 交互页
 
+### 阶段 4：和声与节奏
+
+- **Drop2/Drop3 引擎**（`Theory/DropVoicings.cs`）：任意 4 音七和弦 × 三个弦组 × 四转位生成可弹指型，自动过滤超出指板 / 手指跨度的结果
+- `VoiceLeading`：声部连接评分，选取移动最少的和弦进行衔接
+- `ChordName.Parse`：紧凑和弦符号解析（`Cmaj7` / `Gm7` / `Am7b5` / `Dm9`…）
+- `<ChordDiagram>` 升级：横按条渲染 + 可调品数视窗
+- `/voicings` 页：浏览任意 Drop2/Drop3 和弦的所有指型并试听
+- `Theory/Progression.cs` + `<ProgressionPlayer>` + `/progressions` 页：8 个经典进行的循环播放（ii–V–I 大/小调、Autumn Leaves、Rhythm Changes、So What、Maiden Voyage、Cantaloupe Island、C Jam Blues）
+- `:::voicing` / `:::progression` 指令
+- 模块 4 课程 8 节：Shell 和弦、Drop2/Drop3、三全音替代、次属和弦、重配和声、上层结构
+- 模块 5 课程 6 节：节奏感觉、伴奏节奏型、Bossa、Funk、奇数拍、Rhythm Changes
+- 每节课程配 Lick 示范（五线谱 + TAB）与可循环播放的进行
+
 ## 后续路线
 
-- 阶段 4：Drop2 / Drop3 Voicing 引擎、和弦进行与 Voicing 库、横按和弦支持
-- 阶段 5：Lick 库（乐谱 + 音频 + 指板联动）、大师风格分析
+- 阶段 5：Lick 库（乐谱 + 音频 + 指板联动）、大师风格分析、模块 6-7
 - 阶段 6：深色模式切换、移动端深度适配、PWA、部署与多设备同步
 
 ## License

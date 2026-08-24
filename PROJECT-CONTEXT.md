@@ -2,7 +2,7 @@
 
 > 本文档记录项目当前状态、技术栈、约定与踩坑，便于在新机器/新会话中快速恢复上下文。
 >
-> 最后更新：阶段 3 完成（VexFlow 五线谱 + TAB、五度圈、和声地图、模块 2-3 课程）。
+> 最后更新：阶段 4 完成（Drop2/Drop3 Voicing 引擎、和弦进行播放器、模块 4-5 课程）。
 
 ## 1. 项目基本信息
 
@@ -21,7 +21,7 @@
 | 音频 | Tone.js | Tone@15.0.4（CDN），`wwwroot/js/audio.js` + `interop.js` + `AudioInterop.cs` |
 | Markdown | Markdig | Markdig 1.3.2 |
 | 乐谱 | VexFlow | **VexFlow 4.2.3（CDN UMD，全局 `Vex`）**，`wwwroot/js/notation.js` + `NotationInterop.cs` |
-| 测试 | xUnit | xUnit，**48 个测试全通过** |
+| 测试 | xUnit | xUnit，**73 个测试全通过** |
 | PWA / MAUI | — | 未开始 |
 
 ## 3. 已完成阶段
@@ -72,6 +72,25 @@
   - `05-3nps.md`（3NPS Pattern 1 C4→C5 上行，五线谱 + TAB）
   - `06-pentatonic-blues.md`（A 小调五声音阶）
 
+### 阶段 4（Drop2/Drop3 引擎、进行播放器、模块 4-5）
+
+- **DropVoicings 引擎** `Theory/DropVoicings.cs`：
+  - `Generate(chord, DropType.Drop2|Drop3, strings)`：4 音七和弦 × 3 个弦组 × 4 转位生成可弹指型
+  - 弦组参数用 VexFlow 约定（`"1234"` = ①②③④ = 高音组），内部归一化为升序弦索引
+  - 过滤：品数 ≤ 15、手指跨度 ≤ 5 品、必须含全部和弦音
+  - 输出复用 `Voicing` / `Fingering` record（带 `BaseFret`、`Notes`）
+- **VoiceLeading** `Theory/VoiceLeading.cs`：`SoundingMidi()` 取实响 MIDI；`BestNext()` 选移动最少的和弦
+- **ChordName.Parse** `Theory/ChordName.cs`：紧凑符号解析（`Cmaj7`/`Gm7`/`Am7b5`/`Dm9`/`G7#5`…）
+- **ChordDiagram 升级**：横按条（连续弦同指同品画粗横杠）、`FretCount` 参数（Drop 指型常用 6-7 品视窗）
+- **/voicings 页** `Pages/VoicingsPage.razor`：根音/质量/类型/弦组 4 选 → 卡片流浏览所有指型，点击发声
+- **:::voicing chord="Cmaj7" type="drop2" strings="1234"** 指令
+- **Progression 库** `Theory/Progression.cs`：8 个经典进行（ii-V-I 大/小调、Autumn Leaves、Rhythm Changes、So What、Maiden Voyage、Cantaloupe Island、C Jam Blues），`ParseSteps("Dm7:2,G7")` 支持小节数
+- **ProgressionPlayer** `Components/AudioPlayer/ProgressionPlayer.razor`：循环播放（复用 Tone.js `playProgression`）、BPM、单和弦试听 chip；`chip`/`chip-active` 样式加入 app.css
+- **/progressions 页** + **:::progression chords="Dm7,G7,Cmaj7" bpm="80"** 指令
+- 模块 4 `04-advanced-harmony/` 8 节：shell voicings、drop2、drop2 转位与声部连接、drop3、三全音替代、次属与连锁 ii-V、重配和声、上层结构 & So What
+- 模块 5 `05-rhythm/` 6 节：节奏感觉、伴奏节奏型、Bossa、Funk、奇数拍、Rhythm Changes
+- 每节课嵌入 `:::voicing` / `:::staff`(五线谱+TAB) / `:::progression` 作为 Lick 示范
+
 ## 4. 关键约定 & 踩过的坑
 
 1. **类名与命名空间冲突**：乐理类已改名为 `GuitarFretboard`；Renderer 里用 `using XXComponent = ...` 别名。
@@ -92,6 +111,10 @@
 13. **`Chord.Name` 截断**：用 `NoteLetters[Root.PitchClass]` 数组查表，不用 `TrimEnd('0'..'9')`。
 14. **GitHub 推送网络问题**：国内网络下 `github.com` 可能被 DNS 污染到 `198.1.x.x`，SSH 22/443 超时。挂代理或换网络后 `git push origin main` 即可，不影响本地开发。
 15. **VexFlow CDN**：`index.html` 中 `<script src="https://cdn.jsdelivr.net/npm/vexflow@4.2.3/releases/vexflow-min.js"></script>` 必须**非 module** 加载（UMD），`notation.js` 作为 ES module 读取全局 `Vex`。
+16. **DropVoicings 弦组参数约定**：`strings` 用 VexFlow 约定（`"1234"` = ①②③④ = 高音组），内部归一化为升序 `StringIndex`（0=低E）。与 `GuitarFretboard` 相反。
+17. **DropVoicings 只支持 4 音七和弦**：三和弦会抛 `ArgumentException`。生成时过滤：品数 ≤ 15、手指跨度 ≤ 5 品、必须含全部和弦音（`chord.PitchClasses.IsSubsetOf`）。
+18. **Chord.Create 默认 octave=4**：`Chord.Notes` 落在 C4-B5 区间。课程 `:::progression` / `:::staff` 引用和弦音符时注意音域。
+19. **`ChordName.Parse` 边界**：`"F#"` 提升号正确；`"Bbm7"` 的 b 会转成 A#（等音）。三全音替代课里 `Db7` 解析为 D#（等音）不改变音高。
 
 ## 5. 目录结构（当前实际）
 
@@ -116,25 +139,30 @@ FUSION-GUITAR-PROJECT-PLAN/
     │   │   ├── Notation/Notation.razor
     │   │   ├── CircleOfFifths/
     │   │   ├── HarmonyMap/
-    │   │   ├── AudioPlayer/
+    │   │   ├── AudioPlayer/{AudioPlayer,ProgressionPlayer}.razor
     │   │   └── Common/{LessonParser.cs,LessonRenderer.cs}
-    │   ├── Theory/                        # Note, Interval, Scale, Chord, GuitarFretboard, Voicing, Enums
+    │   ├── Theory/                        # Note, Interval, Scale, Chord, GuitarFretboard,
+    │   │                                  # Voicing, ChordName, DropVoicings, VoiceLeading,
+    │   │                                  # Progression, Enums
     │   ├── Interop/                       # AudioInterop, NotationInterop
     │   ├── Services/                      # LessonService, LessonModels, ProgressService
     │   ├── Pages/                         # Home, FretboardPage, PianoPage, NotationPage,
-    │   │                                  # CirclePage, HarmonyPage, LessonPage, NotFound
+    │   │                                  # CirclePage, HarmonyPage, VoicingsPage,
+    │   │                                  # ProgressionsPage, LessonPage, NotFound
     │   └── wwwroot/
     │       ├── index.html                 # Tone@15 + VexFlow@4 CDN
     │       ├── js/{audio.js,notation.js,interop.js}
     │       └── lessons/
-    │           ├── index.json             # 模块 1-3 课程目录
+    │           ├── index.json             # 模块 1-5 课程目录
     │           ├── 01-basics/*.md         # 6 节
     │           ├── 02-modes/*.md          # 8 节
-    │           └── 03-chord-scale/*.md    # 7 节
+    │           ├── 03-chord-scale/*.md    # 7 节
+    │           ├── 04-advanced-harmony/*.md  # 8 节
+    │           └── 05-rhythm/*.md         # 6 节
     └── tests/FusionGuitar.Tests/
         ├── FusionGuitar.Tests.csproj
-        ├── Theory/{Note,Scale,Chord,Fretboard}Tests.cs
-        └── LessonParserTests.cs           # 11 个测试（含引号空格回归）
+        ├── Theory/{Note,Scale,Chord,Fretboard,DropVoicing,ChordName,Progression}Tests.cs
+        └── LessonParserTests.cs           # 含引号空格回归
 ```
 
 ## 6. 环境要求（新机器）
@@ -151,7 +179,7 @@ npm install
 
 cd ../../..
 dotnet build FusionGuitar/FusionGuitar.slnx
-dotnet test  FusionGuitar/FusionGuitar.slnx     # 应 48 passed
+dotnet test  FusionGuitar/FusionGuitar.slnx     # 应 73 passed
 dotnet run   --project FusionGuitar/src/FusionGuitar.Web
 # 访问 http://localhost:5294
 ```
@@ -165,6 +193,12 @@ dotnet publish FusionGuitar/src/FusionGuitar.Web -c Release -o ./publish
 ## 7. 提交历史（按时间倒序，关键提交）
 
 ```
+cbe9699  feat(lessons): module 4 advanced harmony + module 5 rhythm
+546d7b8  feat(progressions): progression library, player component, /progressions page
+065923f  feat(voicings): chord diagram barre support + /voicings browser page
+c14e9de  feat(theory): Drop2/Drop3 voicing engine + voice leading
+fe93afd  docs: refresh README and PROJECT-CONTEXT for stage 3
+96c2a6d  docs(lessons): remove redundant ASCII TAB in pentatonic/blues lesson
 214d5e5  fix(parser): preserve spaces inside quoted directive attributes
 08dfe86  fix(notation): reject C/Am key signature, add TAB staff support
 b5f1d4e  feat(notation): VexFlow staff rendering in lessons via :::staff directive
@@ -176,13 +210,15 @@ f287fdf  docs(lessons): revise 3NPS lesson with accurate tab and pattern table
 86fe6d4  chore: bootstrap Fusion Guitar stage 1
 ```
 
-## 8. 下一步：阶段 4（尚未开始）
+## 8. 下一步：阶段 5（尚未开始）
 
-1. Drop2 / Drop3 Voicing 引擎
-2. 和弦进行库与 Voicing 库
-3. `<ChordDiagram>` 支持横按和弦
-4. 模块 4 课程（和弦 / Voicing 系统）
-5. 乐谱与指板 / 钢琴联动（点击乐谱高亮指板位置）
+按计划文档：
+
+1. Lick 库系统（乐谱 + 音频 + 指板联动）
+2. 模块 6 即兴演奏课程
+3. 模块 7 风格与大师分析课程
+4. 乐谱与指板 / 钢琴联动（点击乐谱高亮指板位置）
+5. `<ChordDiagram>` 支持 Drop2+4 / Drop 扩展（目前 Drop3 已支持）
 
 ## 9. 风格 / 代码约定
 
