@@ -1,0 +1,27 @@
+@inject Interop.NotationInterop NotationJs
+
+<div id="@_id" class="@Class" style="min-height:@(_height)px; overflow-x:auto;"></div>
+
+@code {
+    private static int _counter;
+    private readonly string _id = $"vex-{System.Threading.Interlocked.Increment(ref _counter)}";
+    private int _height = 150;
+    private bool _rendered;
+
+    [Parameter] public IReadOnlyList<NotationNote> Notes { get; set; } = Array.Empty<NotationNote>();
+    [Parameter] public string Clef { get; set; } = "treble";
+    [Parameter] public string? TimeSignature { get; set; }
+    [Parameter] public string? KeySignature { get; set; }
+    [Parameter] public int Width { get; set; } = 480;
+    [Parameter] public string Class { get; set; } = "";
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (!_rendered || firstRender)
+        {
+            _rendered = true;
+            await Task.Yield(); // let the div hit the DOM
+            await NotationJs.RenderStaveAsync(_id, Width, Clef, TimeSignature, KeySignature, Notes);
+        }
+    }
+}

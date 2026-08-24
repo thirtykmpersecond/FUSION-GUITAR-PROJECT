@@ -76,5 +76,10 @@ public enum ScaleFamily
     DiminishedHalfWhole,
     DiminishedWholeHalf,
     BebopDominant,
+    LydianDominant,
+    LydianAugmented,
+    MixolydianFlat6,
+    HalfDiminished,
+    PhrygianDominant,
     Altered
 }

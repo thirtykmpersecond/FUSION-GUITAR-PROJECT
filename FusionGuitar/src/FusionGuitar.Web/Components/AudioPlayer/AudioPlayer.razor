@@ -1,0 +1,68 @@
+@inject Interop.AudioInterop Audio
+
+<div class="card p-4 flex flex-wrap items-center gap-3">
+    <div class="flex items-center gap-2">
+        <span class="text-xs text-slate-500 uppercase tracking-wider">BPM</span>
+        <input type="number" min="30" max="240" @bind="_bpm"
+               class="w-16 rounded-lg border-slate-300 text-sm py-1" />
+    </div>
+    <button class="@(_metro ? "btn" : "btn-ghost border border-slate-200")"
+            @onclick="ToggleMetronome">
+        @(_metro ? "■ 停止节拍器" : "▶ 节拍器")
+    </button>
+    @if (Chords is { Count: > 0 })
+    {
+        <button class="@(_loop ? "btn" : "btn-ghost border border-slate-200")"
+                @onclick="ToggleLoop">
+            @(_loop ? "■ 停止 Loop" : "▶ 播放进行")
+        </button>
+    }
+    <span class="text-xs text-slate-400">@Text</span>
+</div>
+
+@code {
+    [Parameter] public IReadOnlyList<ProgressionChord>? Chords { get; set; }
+    [Parameter] public string Text { get; set; } = "";
+    [Parameter] public int Bpm { get; set; } = 100;
+
+    private int _bpm;
+    private bool _metro;
+    private bool _loop;
+
+    protected override void OnInitialized() => _bpm = Bpm;
+
+    private async Task ToggleMetronome()
+    {
+        if (_metro)
+        {
+            await Audio.StopMetronomeAsync();
+            _metro = false;
+        }
+        else
+        {
+            await Audio.StartMetronomeAsync(_bpm);
+            _metro = true;
+        }
+    }
+
+    private async Task ToggleLoop()
+    {
+        if (Chords is null) return;
+        if (_loop)
+        {
+            await Audio.StopProgressionAsync();
+            _loop = false;
+        }
+        else
+        {
+            await Audio.PlayProgressionAsync(Chords, _bpm);
+            _loop = true;
+        }
+    }
+
+    public async ValueTask StopAllAsync()
+    {
+        if (_metro) { await Audio.StopMetronomeAsync(); _metro = false; }
+        if (_loop) { await Audio.StopProgressionAsync(); _loop = false; }
+    }
+}

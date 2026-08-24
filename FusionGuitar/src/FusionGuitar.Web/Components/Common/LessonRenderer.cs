@@ -5,6 +5,8 @@ using Microsoft.AspNetCore.Components.Rendering;
 using FretboardComponent = FusionGuitar.Web.Components.Fretboard.Fretboard;
 using PianoComponent = FusionGuitar.Web.Components.PianoKeyboard.PianoKeyboard;
 using ChordDiagramComponent = FusionGuitar.Web.Components.ChordDiagram.ChordDiagram;
+using CircleComponent = FusionGuitar.Web.Components.CircleOfFifths.CircleOfFifths;
+using HarmonyComponent = FusionGuitar.Web.Components.HarmonyMap.HarmonyMap;
 
 namespace FusionGuitar.Web.Components.Common;
 
@@ -53,6 +55,12 @@ public sealed class LessonRenderer : ComponentBase
                 break;
             case "chord":
                 RenderChord(b, ref seq, seg);
+                break;
+            case "circle":
+                RenderCircle(b, ref seq, seg);
+                break;
+            case "harmony":
+                RenderHarmony(b, ref seq, seg);
                 break;
             case "callout":
                 b.OpenElement(seq++, "div");
@@ -136,6 +144,21 @@ public sealed class LessonRenderer : ComponentBase
         b.OpenComponent<ChordDiagramComponent>(seq++);
         b.AddAttribute(seq++, "Chord", chord);
         b.AddAttribute(seq++, "Voicing", voicing);
+        b.CloseComponent();
+    }
+
+    private static void RenderCircle(RenderTreeBuilder b, ref int seq, LessonSegment seg)
+    {
+        b.OpenComponent<CircleComponent>(seq++);
+        b.CloseComponent();
+    }
+
+    private static void RenderHarmony(RenderTreeBuilder b, ref int seq, LessonSegment seg)
+    {
+        var rootName = LessonParser.AsString(seg.Args.GetValueOrDefault("root"), "C");
+        if (!Enum.TryParse<NoteName>(rootName, ignoreCase: true, out var root)) root = NoteName.C;
+        b.OpenComponent<HarmonyComponent>(seq++);
+        b.AddAttribute(seq++, "Root", root);
         b.CloseComponent();
     }
 }

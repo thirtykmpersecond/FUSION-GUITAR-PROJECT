@@ -13,6 +13,37 @@
         { "slug": "05-3nps", "title": "3-notes-per-string 指型", "summary": "每条弦三个音，大调音阶经济指法。", "order": 5, "tags": ["fretboard","scale"] },
         { "slug": "06-pentatonic-blues", "title": "五声音阶与蓝调音阶", "summary": "大小调五声、蓝调音与五声把位连接。", "order": 6, "tags": ["scale","blues"] }
       ]
+    },
+    {
+      "id": "02-modes",
+      "title": "02 调式理论",
+      "description": "7 种教会调式、特征音、调式互换与全指板指型。",
+      "order": 2,
+      "lessons": [
+        { "slug": "01-what-are-modes", "title": "什么是调式", "summary": "同一起始音的 7 种音阶，调式 = 平移大调音阶。", "order": 1, "tags": ["modes"] },
+        { "slug": "02-ionian", "title": "Ionian 伊奥尼亚", "summary": "即大调，明亮、稳定。", "order": 2, "tags": ["mode"] },
+        { "slug": "03-dorian", "title": "Dorian 多利亚", "summary": "自然小调 + 大六度，Fusion 最常用调式之一。", "order": 3, "tags": ["mode"] },
+        { "slug": "04-phrygian", "title": "Phrygian 弗里吉亚", "summary": "小调 + b2，西班牙/金属色彩。", "order": 4, "tags": ["mode"] },
+        { "slug": "05-lydian", "title": "Lydian 利底亚", "summary": "大调 + #4，梦幻、悬浮。", "order": 5, "tags": ["mode"] },
+        { "slug": "06-mixolydian", "title": "Mixolydian 混合利底亚", "summary": "大调 + b7，Blues/Rock/Fusion 属和弦底色。", "order": 6, "tags": ["mode"] },
+        { "slug": "07-aeolian-locrian", "title": "Aeolian & Locrian", "summary": "自然小调与半减调式。", "order": 7, "tags": ["mode"] },
+        { "slug": "08-modal-interchange", "title": "调式互换", "summary": "借用同主音不同调式和弦。", "order": 8, "tags": ["harmony"] }
+      ]
+    },
+    {
+      "id": "03-chord-scale",
+      "title": "03 和弦-音阶理论",
+      "description": "Chord-Scale 体系：为每个和弦选择最合适的音阶。",
+      "order": 3,
+      "lessons": [
+        { "slug": "01-introduction", "title": "和弦-音阶理论入门", "summary": "为什么一个和弦可以对应多个音阶。", "order": 1, "tags": ["chord-scale"] },
+        { "slug": "02-major-system", "title": "大调体系", "summary": "Imaj7-IVmaj7: Ionian/Lydian; ii7: Dorian; V7: Mixolydian 等。", "order": 2, "tags": ["chord-scale"] },
+        { "slug": "03-melodic-minor", "title": "旋律小调体系", "summary": "Melodic Minor 及其衍生调式：Lydian Dominant、Altered 等。", "order": 3, "tags": ["chord-scale"] },
+        { "slug": "04-harmonic-minor", "title": "和声小调体系", "summary": "Harmonic Minor、Phrygian Dominant 等。", "order": 4, "tags": ["chord-scale"] },
+        { "slug": "05-symmetrical-scales", "title": "对称音阶", "summary": "全音音阶、减音阶（Half-Whole / Whole-Half）。", "order": 5, "tags": ["scale"] },
+        { "slug": "06-application-ii-v-i", "title": "应用：ii–V–I", "summary": "最经典的爵士进行与音阶选择。", "order": 6, "tags": ["chord-scale"] },
+        { "slug": "07-application-static", "title": "应用：静态和弦", "summary": "一个和弦铺底时如何切换调式制造张力。", "order": 7, "tags": ["chord-scale"] }
+      ]
     }
   ]
 }

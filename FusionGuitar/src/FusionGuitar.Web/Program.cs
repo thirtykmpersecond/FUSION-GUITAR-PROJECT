@@ -10,6 +10,7 @@ builder.RootComponents.Add<HeadOutlet>("head::after");
 
 builder.Services.AddScoped(sp => new HttpClient { BaseAddress = new Uri(builder.HostEnvironment.BaseAddress) });
 builder.Services.AddScoped<AudioInterop>();
+builder.Services.AddScoped<NotationInterop>();
 builder.Services.AddScoped<LessonService>();
 builder.Services.AddScoped<ProgressService>();
 

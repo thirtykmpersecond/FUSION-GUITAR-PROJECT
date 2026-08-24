@@ -1,0 +1,29 @@
+@page "/harmony"
+@using FusionGuitar.Web.Theory
+
+<section class="space-y-6">
+    <header class="flex items-end justify-between flex-wrap gap-4">
+        <div>
+            <h1 class="text-2xl font-semibold tracking-tight">和声地图 Harmony Map</h1>
+            <p class="text-slate-500 text-sm mt-1">顺阶和弦、T/SD/D 功能、V-I 解决。点击节点听和弦。</p>
+        </div>
+        <label class="block">
+            <span class="text-xs text-slate-500 uppercase tracking-wide">调 Root</span>
+            <select @bind="root" class="mt-1 rounded-xl border-slate-300 text-sm" @bind:after="Refresh">
+                @foreach (var n in Enum.GetValues<NoteName>())
+                {
+                    <option value="@n">@n</option>
+                }
+            </select>
+        </label>
+    </header>
+
+    <section class="card p-4 md:p-6 flex justify-center">
+        <HarmonyMap Root="@root" />
+    </section>
+</section>
+
+@code {
+    private NoteName root = NoteName.C;
+    private void Refresh() { StateHasChanged(); }
+}

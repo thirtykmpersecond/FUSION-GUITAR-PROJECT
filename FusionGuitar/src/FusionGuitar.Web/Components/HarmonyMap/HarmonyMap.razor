@@ -1,0 +1,145 @@
+@using FusionGuitar.Web.Theory
+
+<svg viewBox="0 0 420 420" class="@Class" xmlns="http://www.w3.org/2000/svg" role="img"
+     aria-label="Harmony map">
+    <text x="20" y="28" font-size="15" font-weight="600" fill="#0f172a" class="select-none">
+        @RootName 大调顺阶和弦
+    </text>
+    <text x="20" y="46" font-size="11" fill="#64748b" class="select-none">
+        Tonic 蓝 · Subdominant 琥珀 · Dominant 玫红
+    </text>
+
+    <!-- Edges -->
+    @foreach (var (a, b) in Edges)
+    {
+        var emph = (a == 4 && b == 0) || (a == 0 && b == 4);
+        <line x1="@X(a)" y1="@Y(a)" x2="@X(b)" y2="@Y(b)"
+              stroke="@(emph ? "#f43f5e" : "#cbd5e1")"
+              stroke-width="@(emph ? 2.4 : 1.4)"
+              stroke-dasharray="@(emph ? "" : "3 3")" />
+    }
+
+    <!-- Nodes in fifth-cycle order: I IV viio iii vi ii V -->
+    @for (int pos = 0; pos < 7; pos++)
+    {
+        var degree = Order[pos];
+        var x = X(degree);
+        var y = Y(degree);
+        var pc = (RootPc + Diatonic[degree]) % 12;
+        var chord = Chord.Create((NoteName)pc, QualityFor(degree));
+        var color = ColorFor(degree);
+        var selected = _selected == degree;
+        var fill = selected ? color : "#ffffff";
+        var text = selected ? "#ffffff" : color;
+
+        <g class="cursor-pointer"
+           @onclick="() => Select(degree)"
+           @onmouseenter="() => _hover = degree"
+           @onmouseleave="() => _hover = null">
+            <circle cx="@x" cy="@y" r="@R" fill="@fill" stroke="@color" stroke-width="2.5" />
+            <g>
+                <text x="@x" y="@(y - 2)" text-anchor="middle" font-size="14"
+                      font-weight="700" fill="@text" class="select-none pointer-events-none">
+                    @chord.Name
+                </text>
+            </g>
+            <g>
+                <text x="@x" y="@(y + 13)" text-anchor="middle" font-size="10"
+                      fill="@text" opacity="0.85" class="select-none pointer-events-none">
+                    @LabelFor(degree)
+                </text>
+            </g>
+        </g>
+    }
+
+    <!-- Legend -->
+    <g transform="translate(20, 400)">
+        <circle cx="6" cy="0" r="5" fill="#3b82f6" />
+        <text x="16" y="4" font-size="11" fill="#475569">T (I, iii, vi)</text>
+        <circle cx="100" cy="0" r="5" fill="#f59e0b" />
+        <text x="110" y="4" font-size="11" fill="#475569">SD (IV, ii)</text>
+        <circle cx="190" cy="0" r="5" fill="#f43f5e" />
+        <text x="200" y="4" font-size="11" fill="#475569">D (V, vii°)</text>
+    </g>
+</svg>
+
+@code {
+    private const double Cx = 210, Cy = 230, RingR = 140, R = 29;
+    // Position degrees around circle by 5ths: I IV viio iii vi ii V
+    private static readonly int[] Order = { 0, 3, 6, 2, 5, 1, 4 };
+    private static readonly int[] Diatonic = { 0, 2, 4, 5, 7, 9, 11 };
+    private static readonly (int, int)[] Edges = {
+        (0, 1), (1, 2), (2, 3), (3, 4), (4, 5), (5, 6), (6, 0), // 5ths cycle
+        (0, 4), (0, 5), (0, 3), (1, 5)                          // common progressions
+    };
+
+    [Parameter] public NoteName Root { get; set; } = NoteName.C;
+    [Parameter] public EventCallback<int> OnDegreeSelected { get; set; }
+    [Parameter] public string Class { get; set; } = "w-full max-w-lg mx-auto";
+
+    [Inject] public Interop.AudioInterop Audio { get; set; } = default!;
+
+    private int? _selected;
+    private int? _hover;
+    private int RootPc => (int)Root;
+    private string RootName => NoteLetters[RootPc];
+
+    private double X(int degree)
+    {
+        var idx = Array.IndexOf(Order, degree);
+        var angle = -Math.PI / 2 + idx * 2 * Math.PI / 7;
+        return Cx + RingR * Math.Cos(angle);
+    }
+
+    private double Y(int degree)
+    {
+        var idx = Array.IndexOf(Order, degree);
+        var angle = -Math.PI / 2 + idx * 2 * Math.PI / 7;
+        return Cy + RingR * Math.Sin(angle);
+    }
+
+    private static ChordQuality QualityFor(int d) => d switch
+    {
+        0 or 3 or 4 => ChordQuality.Major,
+        1 or 2 or 5 => ChordQuality.Minor,
+        6 => ChordQuality.Diminished,
+        _ => ChordQuality.Major
+    };
+
+    private static string LabelFor(int d) => d switch
+    {
+        0 => "I", 1 => "ii", 2 => "iii", 3 => "IV",
+        4 => "V", 5 => "vi", 6 => "vii°", _ => ""
+    };
+
+    private static string ColorFor(int d) => d switch
+    {
+        0 or 2 or 5 => "#3b82f6",
+        1 or 3 => "#f59e0b",
+        4 or 6 => "#f43f5e",
+        _ => "#94a3b8"
+    };
+
+    private static readonly string[] NoteLetters =
+        { "C", "C#", "D", "D#", "E", "F", "F#", "G", "G#", "A", "A#", "B" };
+
+    private async Task Select(int degree)
+    {
+        _selected = degree;
+        await OnDegreeSelected.InvokeAsync(degree);
+        var pc = (RootPc + Diatonic[degree]) % 12;
+        var chord = Chord.Create((NoteName)pc, QualityFor(degree));
+        var notes = chord.Formula.Intervals
+            .Select(offset => 60 + pc + offset).Select(MidiName).ToArray();
+        await Audio.PlayChordAsync(notes, 1.2);
+    }
+
+    private static readonly string[] N =
+        { "C", "C#", "D", "D#", "E", "F", "F#", "G", "G#", "A", "A#", "B" };
+    private static string MidiName(int midi)
+    {
+        var pc = ((midi % 12) + 12) % 12;
+        var oct = midi / 12 - 1;
+        return N[pc] + oct;
+    }
+}

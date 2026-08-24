@@ -1,0 +1,186 @@
+@using FusionGuitar.Web.Theory
+
+<svg viewBox="0 0 400 400" class="@Class" xmlns="http://www.w3.org/2000/svg" role="img"
+     aria-label="Circle of fifths">
+    <!-- decorative ring -->
+    <circle cx="200" cy="200" r="185" fill="none" stroke="#e2e8f0" stroke-width="1" />
+    <circle cx="200" cy="200" r="110" fill="none" stroke="#e2e8f0" stroke-width="1" />
+
+    <!-- segments -->
+    @for (int i = 0; i < 12; i++)
+    {
+        var majorFill = MajorFill(i);
+        var minorFill = MinorFill(i);
+        var (x1, y1, x2, y2) = SegmentPoints(i, OuterR);
+        var (ix1, iy1, ix2, iy2) = SegmentPoints(i, InnerR);
+        var (mlx, mly) = LabelPos(i, MajorLabelR);
+        var (mmx, mmy) = LabelPos(i, MinorLabelR);
+        var (sx, sy) = SegmentMid(i, OuterR - 12);
+
+        <path d="@MajorArcPath(i)" fill="@majorFill" stroke="#ffffff" stroke-width="2"
+              class="cursor-pointer transition-colors"
+              @onclick="() => SelectMajor(i)" @onmouseenter="() => HoverMajor(i)" />
+        <path d="@MinorArcPath(i)" fill="@minorFill" stroke="#ffffff" stroke-width="2"
+              class="cursor-pointer transition-colors"
+              @onclick="() => SelectMinor(i)" @onmouseenter="() => HoverMinor(i)" />
+
+        <g>
+            <text x="@mlx" y="@mly" text-anchor="middle" dominant-baseline="central"
+                  font-size="15" font-weight="600"
+                  fill="@MajorText(i)" class="pointer-events-none select-none">@MajorLabels[i]</text>
+        </g>
+        <g>
+            <text x="@mmx" y="@mmy" text-anchor="middle" dominant-baseline="central"
+                  font-size="11"
+                  fill="@MinorText(i)" class="pointer-events-none select-none">@MinorLabels[i]</text>
+        </g>
+    }
+
+    <!-- center label -->
+    <circle cx="200" cy="200" r="55" fill="white" stroke="#e2e8f0" />
+    <text x="200" y="194" text-anchor="middle" font-size="13" font-weight="600"
+          fill="#0f172a" class="select-none">@CenterTitle</text>
+    <text x="200" y="214" text-anchor="middle" font-size="11" fill="#64748b"
+          class="select-none">@CenterSubtitle</text>
+</svg>
+
+@code {
+    private const double Cx = 200, Cy = 200;
+    private const double OuterR = 185;
+    private const double InnerR = 110;
+    private const double MajorLabelR = 148;
+    private const double MinorLabelR = 82;
+
+    // Clockwise from top (C). Right half = sharps, left half = flats.
+    private static readonly string[] MajorLabels =
+        { "C", "G", "D", "A", "E", "B", "F♯", "D♭", "A♭", "E♭", "B♭", "F" };
+    private static readonly string[] MinorLabels =
+        { "Am", "Em", "Bm", "F♯m", "C♯m", "G♯m", "E♭m", "B♭m", "Fm", "Cm", "Gm", "Dm" };
+
+    // Semitone offsets relative to C.
+    private static readonly int[] MajorPcs = { 0, 7, 2, 9, 4, 11, 6, 1, 8, 3, 10, 5 };
+    private static readonly int[] MinorPcs = { 9, 4, 11, 6, 1, 8, 3, 10, 5, 0, 7, 2 };
+
+    [Parameter] public int? SelectedMajorIndex { get; set; }
+    [Parameter] public EventCallback<int> OnMajorSelected { get; set; }
+    [Parameter] public int? SelectedMinorIndex { get; set; }
+    [Parameter] public EventCallback<int> OnMinorSelected { get; set; }
+    [Parameter] public string Class { get; set; } = "w-full max-w-md mx-auto";
+    [Parameter] public bool AudioOnClick { get; set; } = true;
+
+    [Inject] public Interop.AudioInterop Audio { get; set; } = default!;
+
+    private int? _hoverMajor, _hoverMinor;
+
+    private string CenterTitle =>
+        SelectedMajorIndex is int mi ? MajorLabels[mi] :
+        SelectedMinorIndex is int ni ? MinorLabels[ni] : "五度圈";
+    private string CenterSubtitle =>
+        SelectedMajorIndex is int maj ? $"相对小调 {MinorLabels[maj]}" :
+        SelectedMinorIndex is int min ? $"相对大调 {MajorLabels[min]}" :
+        "Circle of Fifths";
+
+    private static double AngleFor(int i) => (-90 + i * 30) * Math.PI / 180.0;
+
+    private static (double x, double y) Pt(double angle, double r) =>
+        (Cx + r * Math.Cos(angle), Cy + r * Math.Sin(angle));
+
+    private static (double, double, double, double) SegmentPoints(int i, double r)
+    {
+        var (x1, y1) = Pt(AngleFor(i) - Math.PI / 12, r);
+        var (x2, y2) = Pt(AngleFor(i) + Math.PI / 12, r);
+        return (x1, y1, x2, y2);
+    }
+
+    private static (double, double) LabelPos(int i, double r) => Pt(AngleFor(i), r);
+    private static (double, double) SegmentMid(int i, double r) => Pt(AngleFor(i), r);
+
+    private string MajorArcPath(int i)
+    {
+        var (x1, y1, x2, y2) = SegmentPoints(i, OuterR);
+        var (ix1, iy1, ix2, iy2) = SegmentPoints(i, InnerR);
+        return $"M {x1:F1} {y1:F1} A {OuterR} {OuterR} 0 0 1 {x2:F1} {y2:F1} " +
+               $"L {ix2:F1} {iy2:F1} A {InnerR} {InnerR} 0 0 0 {ix1:F1} {iy1:F1} Z";
+    }
+
+    private string MinorArcPath(int i)
+    {
+        var (x1, y1, x2, y2) = SegmentPoints(i, InnerR);
+        return $"M {x1:F1} {y1:F1} A {InnerR} {InnerR} 0 0 1 {x2:F1} {y2:F1} " +
+               $"L {Cx} {Cy} Z";
+    }
+
+    private bool IsMajorHighlighted(int i)
+    {
+        if (SelectedMajorIndex is int sel)
+            return i == sel || i == (sel + 11) % 12 || i == (sel + 1) % 12;
+        if (SelectedMinorIndex is int n)
+            return i == n;
+        return false;
+    }
+
+    private bool IsMinorHighlighted(int i)
+    {
+        if (SelectedMinorIndex is int sel)
+            return i == sel || i == (sel + 11) % 12 || i == (sel + 1) % 12;
+        if (SelectedMajorIndex is int n)
+            return i == n;
+        return false;
+    }
+
+    private string MajorFill(int i)
+    {
+        if (SelectedMajorIndex == i) return "#4553d9";
+        if (SelectedMinorIndex == i) return "#6366f1";
+        if (_hoverMajor == i) return "#eef2ff";
+        if (IsMajorHighlighted(i)) return "#e0e7ff";
+        return "#ffffff";
+    }
+
+    private string MinorFill(int i)
+    {
+        if (SelectedMinorIndex == i) return "#7c3aed";
+        if (SelectedMajorIndex == i) return "#a78bfa";
+        if (_hoverMinor == i) return "#f5f3ff";
+        if (IsMinorHighlighted(i)) return "#ede9fe";
+        return "#f8fafc";
+    }
+
+    private string MajorText(int i) =>
+        (SelectedMajorIndex == i || SelectedMinorIndex == i) ? "#ffffff" : "#0f172a";
+    private string MinorText(int i) =>
+        (SelectedMinorIndex == i || SelectedMajorIndex == i) ? "#ffffff" : "#475569";
+
+    private void HoverMajor(int i) => _hoverMajor = i;
+    private void HoverMinor(int i) => _hoverMinor = i;
+
+    private async Task SelectMajor(int i)
+    {
+        _hoverMajor = null;
+        await OnMajorSelected.InvokeAsync(i);
+        if (AudioOnClick) await PlayChord(MajorPcs[i], isMinor: false);
+    }
+
+    private async Task SelectMinor(int i)
+    {
+        _hoverMinor = null;
+        await OnMinorSelected.InvokeAsync(i);
+        if (AudioOnClick) await PlayChord(MinorPcs[i], isMinor: true);
+    }
+
+    private async Task PlayChord(int rootPc, bool isMinor)
+    {
+        var intervals = new[] { 0, isMinor ? 3 : 4, 7 };
+        var notes = intervals.Select(offset => MidiName(60 + rootPc + offset)).ToArray();
+        await Audio.PlayChordAsync(notes, 1.2);
+    }
+
+    private static readonly string[] N =
+        { "C", "C#", "D", "D#", "E", "F", "F#", "G", "G#", "A", "A#", "B" };
+    private static string MidiName(int midi)
+    {
+        var pc = ((midi % 12) + 12) % 12;
+        var oct = midi / 12 - 1;
+        return N[pc] + oct;
+    }
+}

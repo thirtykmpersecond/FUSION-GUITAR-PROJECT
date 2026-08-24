@@ -1,0 +1,51 @@
+@page "/circle"
+@using FusionGuitar.Web.Theory
+
+<section class="space-y-6">
+    <header>
+        <h1 class="text-2xl font-semibold tracking-tight">五度圈 Circle of Fifths</h1>
+        <p class="text-slate-500 text-sm mt-1">点击任一大调或小调，听其主三和弦，查看关系大小调与相邻调。</p>
+    </header>
+
+    <section class="card p-4 md:p-8 flex justify-center">
+        <CircleOfFifths OnMajorSelected="OnMajor" OnMinorSelected="OnMinor" />
+    </section>
+
+    @if (_info is not null)
+    {
+        <section class="card p-5 text-sm">
+            <div class="text-xs uppercase tracking-wider text-slate-400">已选择</div>
+            <div class="text-lg font-semibold mt-1">@_info.Title</div>
+            <p class="text-slate-600 dark:text-slate-300 mt-2">@_info.Body</p>
+        </section>
+    }
+</section>
+
+@code {
+    private static readonly string[] Majors =
+        { "C", "G", "D", "A", "E", "B", "F#/Gb", "Db", "Ab", "Eb", "Bb", "F" };
+    private static readonly string[] Minors =
+        { "Am", "Em", "Bm", "F#m", "C#m", "G#m", "Ebm/D#m", "Bbm", "Fm", "Cm", "Gm", "Dm" };
+    private static readonly int[] Sharps = { 0, 1, 2, 3, 4, 5, 6, 0, 4, 3, 2, 1 };
+    private static readonly bool[] UseSharp =
+        { true, true, true, true, true, true, true, false, false, false, false, false };
+
+    private record Info(string Title, string Body);
+    private Info? _info;
+
+    private void OnMajor(int idx)
+    {
+        var sharps = Sharps[idx];
+        var accidental = UseSharp[idx] ? "升号" : "降号";
+        _info = new Info(
+            $"{Majors[idx]} 大调",
+            $"{Majors[idx]} 大调含 {sharps} 个{accidental}，关系小调为 {Minors[idx]}。顺时针为属调（多一个升号或少一个降号），逆时针为下属调。");
+    }
+
+    private void OnMinor(int idx)
+    {
+        _info = new Info(
+            $"{Minors[idx]}",
+            $"{Minors[idx]} 的关系大调是 {Majors[idx]}，使用同一调号。自然小调音阶：{Majors[idx]} 大调从 6 级开始。");
+    }
+}
