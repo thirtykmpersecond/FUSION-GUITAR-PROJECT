@@ -13,5 +13,6 @@ builder.Services.AddScoped<AudioInterop>();
 builder.Services.AddScoped<NotationInterop>();
 builder.Services.AddScoped<LessonService>();
 builder.Services.AddScoped<ProgressService>();
+builder.Services.AddScoped<ThemeService>();
 
 await builder.Build().RunAsync();

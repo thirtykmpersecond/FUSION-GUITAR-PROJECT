@@ -89,6 +89,9 @@ body {
   }
   .prose-lesson table {
     @apply w-full my-4 text-sm border-collapse;
+    display: block;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
   }
   .prose-lesson th, .prose-lesson td {
     @apply border border-slate-200 dark:border-slate-700 px-3 py-2 text-left;
