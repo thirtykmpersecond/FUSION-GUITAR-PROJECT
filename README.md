@@ -1,74 +1,140 @@
 # Fusion Guitar
 
-面向电吉他手的系统 Fusion / Jazz 乐理教材，以交互式 Web 应用形式呈现：可点击发声的指板图、钢琴键盘、和弦图，配合音频示范与乐谱渲染。中文为主，术语附英文对照。
+面向电吉他手的系统 Fusion / Jazz 乐理教材，以交互式 Web 应用形式呈现：可点击发声的指板图、钢琴键盘、和弦图，配合 VexFlow 渲染的五线谱与吉他六线谱（TAB），以及可循环变速的音频播放器。中文为主，术语附英文对照。
 
-> 当前处于 **阶段 1**：乐理引擎 + 基础可视化组件已完成。详细路线图见 [FUSION-GUITAR-PROJECT-PLAN.md](./FUSION-GUITAR-PROJECT-PLAN.md)。
+> 当前处于 **阶段 3 完成**：乐理引擎、课程框架、交互式组件、VexFlow 乐谱（含 TAB）、五度圈、和声地图、模块 1-3 课程均已落地。详细路线图见 [FUSION-GUITAR-PROJECT-PLAN.md](./FUSION-GUITAR-PROJECT-PLAN.md)。
 
 ## 技术栈
 
-- [.NET 10 Blazor WebAssembly](https://dotnet.microsoft.com/apps/aspnet/web-apps/blazor)（C# / Razor，编译为 WebAssembly）
+- [.NET 10 Blazor WebAssembly](https://dotnet.microsoft.com/apps/aspnet/web-apps/blazor)（C# / Razor，编译为 WebAssembly，`.slnx` 解决方案）
 - [Tailwind CSS](https://tailwindcss.com/)（Apple 风格 UI，毛玻璃 / 大圆角 / 深浅色模式预留）
-- [Tone.js](https://tonejs.github.io/)（经 JS Interop 调用，音频合成）
-- xUnit（乐理引擎单元测试）
+- [Tone.js](https://tonejs.github.io/)（经 JS Interop 调用，音频合成与回放）
+- [VexFlow 4.2.3](https://www.vexflow.com/)（CDN UMD，`Vex.Flow` 全局变量，渲染五线谱与 TAB）
+- [Markdig](https://github.com/xoofx/markdig)（Markdown 解析 + 自定义 `:::` 组件指令）
+- xUnit（乐理引擎、解析器单元测试，共 48 个）
 
 ## 目录结构
 
 ```
 FusionGuitar/
 ├── src/FusionGuitar.Web/
-│   ├── Theory/            # 乐理引擎：Note / Interval / Scale / Chord / GuitarFretboard
-│   ├── Components/        # Razor 组件：Fretboard / PianoKeyboard / Layout
-│   ├── Interop/           # C# → JS 封装（AudioInterop）
-│   ├── Pages/             # 路由页面
-│   ├── wwwroot/js/        # Tone.js 封装
+│   ├── Theory/            # 乐理引擎：Note / Interval / Scale / Chord / GuitarFretboard / Voicing / Enums
+│   ├── Components/
+│   │   ├── Fretboard/     # 指板 SVG
+│   │   ├── PianoKeyboard/ # 钢琴键盘
+│   │   ├── ChordDiagram/  # 和弦框
+│   │   ├── Notation/      # VexFlow 五线谱 + TAB 组件
+│   │   ├── CircleOfFifths/# 五度圈
+│   │   ├── HarmonyMap/    # 和声替代网络
+│   │   ├── AudioPlayer/   # 音频回放（循环 / 变速）
+│   │   ├── Layout/        # MainLayout / NavMenu
+│   │   └── Common/        # LessonParser / LessonRenderer
+│   ├── Interop/           # C# → JS：AudioInterop / NotationInterop
+│   ├── Services/          # LessonService / ProgressService
+│   ├── Pages/             # Home / Fretboard / Piano / Notation / Circle / Harmony / Lesson
+│   ├── wwwroot/
+│   │   ├── js/            # audio.js / notation.js / interop.js
+│   │   ├── lessons/       # 01-basics / 02-modes / 03-chord-scale + index.json
+│   │   └── index.html     # 引入 Tone.js + VexFlow CDN
 │   └── Styles/app.css     # Tailwind 入口
 └── tests/FusionGuitar.Tests/
-    └── Theory/            # 乐理引擎单元测试
+    ├── Theory/            # 乐理引擎单元测试
+    └── LessonParserTests.cs
 ```
 
 ## 本地开发
 
 ### 环境要求
 
-- [.NET SDK](https://dotnet.microsoft.com/download)（项目文件目标 `net10.0`，可按需改为 `net8.0`）
+- [.NET SDK 10.0+](https://dotnet.microsoft.com/download)（项目文件目标 `net10.0`，可按需改为 `net8.0`）
 - [Node.js](https://nodejs.org/)（仅用于编译 Tailwind CSS）
 
 ### 首次安装与运行
 
 ```bash
 # 安装 Tailwind 依赖（仅首次）
-cd src/FusionGuitar.Web
+cd FusionGuitar/src/FusionGuitar.Web
 npm install
 
-# 运行开发服务器（首次构建会自动编译 Tailwind）
-dotnet run
-
-# 或在仓库根目录运行测试
-dotnet test FusionGuitar/FusionGuitar.slnx
+cd ../../..
+dotnet build FusionGuitar/FusionGuitar.slnx
+dotnet test  FusionGuitar/FusionGuitar.slnx     # 应 48 passed
+dotnet run   --project FusionGuitar/src/FusionGuitar.Web
+# 访问 http://localhost:5294
+# 课程入口：/lessons/01-basics/01-notes-and-intervals
 ```
 
 构建时 MSBuild target 会自动执行 `npm run tailwind:build`。若需实时编辑样式，另开终端：
 
 ```bash
-cd src/FusionGuitar.Web
+cd FusionGuitar/src/FusionGuitar.Web
 npm run tailwind:watch
 ```
 
-## 阶段 1 已完成内容
+### 部署
 
-- 乐理引擎：音名 / MIDI / 频率、音程、19 种音阶与教会调式、18 种和弦公式、指板映射（支持 Standard / Drop D / DADGAD）
-- 单元测试：30 个测试全部通过
-- 组件：`<Fretboard>`（SVG 指板图，品记 / 弦粗细 / 根音高亮 / 点击发声）、`<PianoKeyboard>`（钢琴键盘，和弦 / 音阶高亮）
-- 页面：首页、指板工作台（根音 / 音阶 / 品数切换）、钢琴工作台（根音 / 和弦切换）
-- Apple 风格布局、毛玻璃侧边导航、深浅色样式基础
+```bash
+dotnet publish FusionGuitar/src/FusionGuitar.Web -c Release -o ./publish
+```
+
+输出纯静态 WASM，可放 GitHub Pages / Cloudflare Pages / 任意静态托管。
+
+## 课程 Markdown 指令
+
+课程文件位于 `wwwroot/lessons/{moduleId}/{slug}.md`，由 Markdig 渲染，支持以下自定义 `:::` 指令：
+
+```markdown
+:::fretboard root="C" scale="Major" frets=12
+:::piano root="A" type="chord" name="Minor7"
+:::chord root="C" quality="Major"
+:::callout title="提示"
+
+:::staff clef="treble" key="C" time="4/4"
+         notes="c/4/8 d/4/8 e/4/8 f/4/8"
+         tab="5:3 4:0 4:2 4:3"
+:::tab notes="6:0+5:2+4:2/q 3:1+2:0+1:0/h"
+```
+
+- `:::staff`：VexFlow 五线谱；`notes` 格式为 `pitch/octave/duration`（`+` 连接同时发声的和弦音），`tab` 可选，提供时自动在下方渲染对齐的六线谱。
+- `:::tab`：纯六线谱；`notes` 格式为 `string:fret/duration`，多弦用 `+` 连接。TAB 弦号遵循 VexFlow 约定：`1` = 高音 E 弦，`6` = 低音 E 弦。
+- `key="C"` / `key="Am"` 等无升降号调会被自动跳过（VexFlow 4 不接受空调号字符串）。
+- 所有带引号的属性值**支持内含空格**（解析器已修复）。
+
+## 已完成阶段
+
+### 阶段 1：乐理引擎 + 基础可视化
+
+- `Theory/`：Note / Interval / Scale（19 种公式）/ Chord（18 种公式）/ GuitarFretboard（Standard / Drop D / DADGAD）
+- 组件：`<Fretboard>`、`<PianoKeyboard>`
+- 页面：Home / FretboardPage / PianoPage
+- Apple 风格布局、毛玻璃导航、Tailwind `brand` 色板
+
+### 阶段 2：课程框架 + ChordDiagram + 模块 1
+
+- `LessonService`（从 `wwwroot/lessons/index.json` 加载）、`ProgressService`（localStorage）
+- `LessonParser` + `LessonRenderer`：Markdig 渲染 + `:::` 指令
+- `<ChordDiagram>`：SVG 和弦框，×/○、手指号、点击发声
+- `Voicing`：12 个开放把位和弦
+- 模块 1 课程 6 节：音名与音程 / 大调音阶 / 三和弦与七和弦 / CAGED / 3NPS / 五声与蓝调
+- `/lessons/{moduleId}/{slug}` 路由，含上下课导航、完成按钮、侧边进度计数
+
+### 阶段 3：五度圈 + 和声地图 + VexFlow 乐谱 + 模块 2-3
+
+- `<CircleOfFifths>`：SVG 五度圈，展示调关系与调式互换
+- `<HarmonyMap>`：和弦替代网络
+- `<Notation>`：VexFlow 4 五线谱组件，支持 clef / key / time / 和弦 / 双谱表（五线谱 + TAB，`StaveConnector` 连接）
+- `Interop/NotationInterop.cs` + `wwwroot/js/notation.js`
+- `:::staff` / `:::tab` Markdown 指令，引号值支持空格
+- `<AudioPlayer>` 升级：循环、变速（`Tone.Transport.bpm`）
+- 模块 2 课程 8 节：7 种教会调式 + 调式互换
+- 模块 3 课程 7 节：大调 / 旋律小调 / 和声小调 Chord-Scale、全音 / 减音阶、ii-V-I 应用
+- `/notation` 演示页，`/circle`、`/harmony` 交互页
 
 ## 后续路线
 
-- 阶段 2：Markdig + Blazor 组件嵌入、课程框架、`<ChordDiagram>`、模块 1 课程内容
-- 阶段 3：`<CircleOfFifths>`、`<HarmonyMap>`、VexFlow 乐谱、升级版 `<AudioPlayer>`
-- 阶段 4：Drop2/Drop3 Voicing 引擎、和弦进行 / Voicing 库
+- 阶段 4：Drop2 / Drop3 Voicing 引擎、和弦进行与 Voicing 库、横按和弦支持
 - 阶段 5：Lick 库（乐谱 + 音频 + 指板联动）、大师风格分析
-- 阶段 6：深色模式完善、移动端适配、PWA、部署
+- 阶段 6：深色模式切换、移动端深度适配、PWA、部署与多设备同步
 
 ## License
 
