@@ -10,6 +10,7 @@ using CircleComponent = FusionGuitar.Web.Components.CircleOfFifths.CircleOfFifth
 using HarmonyComponent = FusionGuitar.Web.Components.HarmonyMap.HarmonyMap;
 using NotationComponent = FusionGuitar.Web.Components.Notation.Notation;
 using ProgressionPlayerComponent = FusionGuitar.Web.Components.AudioPlayer.ProgressionPlayer;
+using LickPlayerComponent = FusionGuitar.Web.Components.Lick.LickPlayer;
 
 namespace FusionGuitar.Web.Components.Common;
 
@@ -76,6 +77,9 @@ public sealed class LessonRenderer : ComponentBase
                 break;
             case "progression":
                 RenderProgression(b, ref seq, seg);
+                break;
+            case "lick":
+                RenderLick(b, ref seq, seg);
                 break;
             case "callout":
                 b.OpenElement(seq++, "div");
@@ -239,6 +243,28 @@ public sealed class LessonRenderer : ComponentBase
         b.AddAttribute(seq++, "Key", key);
         b.AddAttribute(seq++, "Chords", (IReadOnlyList<ProgressionChord>)chords);
         b.AddAttribute(seq++, "Names", (IReadOnlyList<string>)names);
+        b.AddAttribute(seq++, "Bpm", bpm);
+        b.CloseComponent();
+    }
+
+    // :::lick name="dorian-1" bpm="90"
+    private static void RenderLick(RenderTreeBuilder b, ref int seq, LessonSegment seg)
+    {
+        var name = LessonParser.AsString(seg.Args.GetValueOrDefault("name"));
+        var bpm = LessonParser.AsInt(seg.Args.GetValueOrDefault("bpm"), 100);
+
+        var lick = LickLibrary.ByName(name);
+        if (lick is null)
+        {
+            b.OpenElement(seq++, "div");
+            b.AddAttribute(seq++, "class", "text-xs text-amber-600");
+            b.AddContent(seq++, $"Unknown lick: {name}");
+            b.CloseElement();
+            return;
+        }
+
+        b.OpenComponent<LickPlayerComponent>(seq++);
+        b.AddAttribute(seq++, "Lick", lick);
         b.AddAttribute(seq++, "Bpm", bpm);
         b.CloseComponent();
     }

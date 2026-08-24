@@ -1,0 +1,44 @@
+@page "/licks"
+@using FusionGuitar.Web.Theory
+
+<section class="space-y-6">
+    <header class="flex items-end justify-between flex-wrap gap-4">
+        <div>
+            <h1 class="text-2xl font-semibold tracking-tight">Lick 库</h1>
+            <p class="text-slate-500 text-sm mt-1">即兴句子库：乐谱 + 指板 + 音频联动。选择一个风格，逐音播放、看指板位置、变速练习。</p>
+        </div>
+    </header>
+
+    <section class="card p-4 space-y-3">
+        <div class="flex flex-wrap items-center gap-2">
+            <span class="text-xs text-slate-500 uppercase tracking-wide">风格 Style</span>
+            <button class="chip @ChipClass(_allLabel)" @onclick="() => SetStyle(_allLabel)">全部</button>
+            @foreach (var s in LickLibrary.Styles)
+            {
+                <button class="chip @ChipClass(s)" @onclick="() => SetStyle(s)">@s</button>
+            }
+        </div>
+        <div class="text-xs text-slate-500">共 @_licks.Count 个 Lick</div>
+    </section>
+
+    <div class="space-y-4">
+        @foreach (var lick in _licks)
+        {
+            <LickPlayer Lick="lick" Bpm="100" />
+        }
+    </div>
+</section>
+
+@code {
+    private string _allLabel = "全部";
+    private string _style = "全部";
+    private IReadOnlyList<Lick> _licks = LickLibrary.All;
+
+    private string ChipClass(string s) => _style == s ? "chip-active" : "";
+
+    private void SetStyle(string s)
+    {
+        _style = s;
+        _licks = LickLibrary.ByStyle(s);
+    }
+}
