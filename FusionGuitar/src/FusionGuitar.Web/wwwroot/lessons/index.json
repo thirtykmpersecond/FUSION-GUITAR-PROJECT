@@ -74,6 +74,37 @@
         { "slug": "05-odd-meters", "title": "奇数拍 5/4、7/8", "summary": "Take Five、Money 类奇数拍。", "order": 5, "tags": ["rhythm","meter"] },
         { "slug": "06-rhythm-changes", "title": "Rhythm Changes", "summary": "I–VI–II–V 结构与经典伴奏。", "order": 6, "tags": ["rhythm","standard"] }
       ]
+    },
+    {
+      "id": "06-improvisation",
+      "title": "06 即兴演奏",
+      "description": "目标音导向、节奏控制、动机句法、空间感、和弦音即兴、转调、色彩音与练习方法论。",
+      "order": 6,
+      "lessons": [
+        { "slug": "01-target-tones", "title": "目标音导向", "summary": "即兴一句一句说，落点放在和弦音。", "order": 1, "tags": ["improvisation"] },
+        { "slug": "02-rhythm-control", "title": "节奏控制", "summary": "空间、切分、变速——时间点的艺术。", "order": 2, "tags": ["improvisation","rhythm"] },
+        { "slug": "03-motives-phrasing", "title": "动机与句法", "summary": "短动机通过重复、移位、倒影发展成段。", "order": 3, "tags": ["improvisation"] },
+        { "slug": "04-space-breathing", "title": "空间感", "summary": "留白与长音，Call & Response 对话式即兴。", "order": 4, "tags": ["improvisation"] },
+        { "slug": "05-arpeggio-soloing", "title": "和弦音即兴", "summary": "把和弦琶音弹成句子，落点永远优先。", "order": 5, "tags": ["improvisation","arpeggio"] },
+        { "slug": "06-transposition", "title": "即兴转调与指板导航", "summary": "一个句子 12 调平移，五种把位导航。", "order": 6, "tags": ["improvisation","fretboard"] },
+        { "slug": "07-tension-color", "title": "色彩音与张力", "summary": "半音包围与 Altered 色彩，落点前的绕行。", "order": 7, "tags": ["improvisation","color"] },
+        { "slug": "08-practice-method", "title": "练习方法论", "summary": "四支柱 + 30 分钟日常模板 + 检查清单。", "order": 8, "tags": ["improvisation","practice"] }
+      ]
+    },
+    {
+      "id": "07-masters",
+      "title": "07 风格与大师",
+      "description": "Fusion 代表性吉他手的风格 DNA 与标志性 Lick 分析。",
+      "order": 7,
+      "lessons": [
+        { "slug": "01-holdsworth", "title": "Allan Holdsworth", "summary": "四度叠置、大跨度和声与线性运动。", "order": 1, "tags": ["style","master"] },
+        { "slug": "02-metheny", "title": "Pat Metheny", "summary": "乡村节奏底色 + 抒情长句 + 空间感。", "order": 2, "tags": ["style","master"] },
+        { "slug": "03-martino", "title": "Pat Martino", "summary": "减和弦系统与线性和声思维。", "order": 3, "tags": ["style","master"] },
+        { "slug": "04-scofield", "title": "John Scofield", "summary": "蓝调语汇、歪斜节奏与 Funky 律动。", "order": 4, "tags": ["style","master"] },
+        { "slug": "05-mclaughlin", "title": "John McLaughlin", "summary": "五声堆叠、印度色彩与高速连奏。", "order": 5, "tags": ["style","master"] },
+        { "slug": "06-fusion-synthesis", "title": "Fusion 风格综合", "summary": "把各位大师 DNA 组合成自己的语汇。", "order": 6, "tags": ["style","fusion"] },
+        { "slug": "07-master-study", "title": "大师研习法", "summary": "转录、分析、内化与再创造的方法。", "order": 7, "tags": ["style","practice"] }
+      ]
     }
   ]
 }
